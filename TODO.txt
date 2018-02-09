@@ -1,0 +1,161 @@
+
+The goal is to move the event entries into a database and refactor the code back to a single script. Any user-customizable behavior will be placed into a configuration file, at least for the time being. At some point we could look at moving those settings into the database itself.
+
+#####################################################################################################
+  Scratch notes
+#####################################################################################################
+
+
+Future milestones
+==============================================
+
+Tables:
+
+* UNKNOWN (not sure what this would be called)
+** wiki page name
+** message subject
+** message body
+*** perhaps not if we build the templae some other way
+** message header
+** message footer
+**
+
+* contacts
+** would be needed to allow for multiple email notifcations per event
+** would also be needed in cases where recipients are CC'd instead of BCC'd
+
+* events
+** bulk of the content would go here
+** columns
+*** priority
+**** 1:1 correlation to Redmine ticket priority values
+*** description
+**** meant for humans looking at db entry
+*** title
+*** date_occurs
+*** time_occurs
+**** UTC time and then convert to localtime (so that Python can handle the
+     daylight savings conversion)
+*** contact_id?
+**** how to link the tables? Should I?
+***** one-to-many relationship here?
+**** foreign key to contacts table
+*** template_id
+
+
+* templates
+** vs flat-files, though in our case we use a Redmine include statement to pull in a wiki page
+
+* notifications
+** ties together contacts, events, ... ?
+
+* meta
+** meta.db_last_modified
+*** logging when any other table was last updated
+** meta.db_revision
+*** auto-increment for every table update
+** meta.db_schema_version
+*** would be used in order to help migrate from one schema version to another (add columns, rename older one, etc.)
+** ?
+
+Configuration file:
+
+* Queries
+** currently read-only queries should be sufficient as I would use another
+   process to get data into the database
+
+* Flags
+** to disable/enable specific classes of event notifications
+*** e.g., disable student worker tickets for times when they're not there
+*** this should probably be set directly in the database (a column in the events table)
+** to control feedback (display debug, warning, info, errors, ...)
+
+* Database credentials
+
+
+
+
+#####################################################################################################
+  TODO
+#####################################################################################################
+
+    * Create 'meta' table for logging when any other table was last updated
+      (presumably we won't be wholesale nuking the existing tables on
+      each run by this point)
+
+      - meta.db_last_modified
+      - meta.db_revision (auto-increment for every update to database)
+
+    * Create TRIGGER to handle updating meta.db_last_modified column when
+      any other table is modified
+
+      - possibly have this same TRIGGER handle updating the meta.db_revision
+        column too
+
+
+#####################################################################################################
+  Google Keep scratch notes
+#####################################################################################################
+
+Purpose:
+
+Send reminders for events. The goal is to support upcoming, current and recently passed dates and times.
+
+The primary purpose is to replace an older hard-coded script that is used to generate automated tickets, but it could be used as a reporting tool as well.
+
+For example, you could have an event reminder type of EndOfLife (eol, end-of-life, end_of_life, etc.) and query based on that type. You would then see that MariaDB 10.0 expires in 2019-03 and that 10.1 expires in 2020-10. This is assuming that we had one or more MariaDB installations we wanted to be aware of expiring soon.
+
+Tags would be more flexible though, so that would likely be implemented over fixed categories.
+
+Early builds would just have a DB manually updated and a script (likely Python) that performs the notification work. We would implement email notifications first, eventually adding support for XMPP notifications.
+
+Re DB schema, I am unsure about the tables and columns per table, but I see the need to support (or be able to calculate) these values:
+
+* event notification schedule: before or after event occurs?
+* event date
+* event time (default to a sane value if not specified?
+* reminder sent (would need some way to allow for multiple entries per event: email, xmpp, text, allowing for a mix of them
+* event description
+* event documentation reference
+* notification template support, but likely outside the database. Perhaps in the database to allow for modification via future web UI
+** should be able to create templates separately and associate same template with multiple events (hence a true template)
+* event type (multiple selection possible): tags support
+* contact name
+* contact email
+* contact phone
+* contact xmpp
+* notification type: email
+* notification type: xmpp
+* notification type: text
+* notification type: web API submission (e.g., Redmine WS API for submitting tickets)
+* notification type: redmine_email
+* redmine category
+* redmine project
+* redmine status
+* redmine due date
+
+The Redmine project, status, category and other details could be contained in a custom footer (for redmine email functionality)
+
+Early version would run as an hourly cron job, so any functionality to send reminder "0 minutes before start" would not act as expected. That functionality would need to be implemented as either an early notification or a post-event notification.
+
+
+Some of the things that the scripts do now:
+
+Daily, skip weekends
+Monday, Friday
+Friday
+2x a month, specific dates
+Once month
+
+I could set the frequency type in events table and use script call to request specific types of events. For example, the existing daily entry would call script with argument for daily tasks. Then the weekly task would do the same and so on.
+
+A standard template could be crafted since we are using an include reference in the body of the email.
+
+The data for the table could be pretty much what the tasks table has now. In a lot of ways all I would be doing is combining the separate scripts into one and getting input data out of script where it does not belong.
+
+
+Ignoring earlier comments, but probably the 0.2 revision (the 0.1 being nearly a 1:1 conversion of the scripts to one script and a db backend, but with pulling directly from db page vs using Redmine include macro) will include support for multiple secondary wiki pages. The first one pulls in the main content, additional pages would be pulled in as content to go in the place of placeholders that would be inserted into the primary Automated Ticket include pages.
+
+For example, where the main page might offer a minimum of summary content and directions and instead rely on the include macro, the 0.2 revision (including the wiki page updates to support it) would pull content from the additional (likely referenced as secondary later on) pages and insert for each placeholder. The primary Automated Ticket pages would no longer (or as seldom as necessary) use the include macro to pull in other content.
+
+My initial impression is that this would require at least one more table, this one to hold wiki page references. The entries would tie back to a specific event and would note whether the table entry was for a primary page or a secondary inclusion page.
