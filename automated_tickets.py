@@ -81,6 +81,7 @@ parser.add_argument(
         'twice_month',
         'monthly',
         'twice_year',
+        'quarterly',
         'yearly'
     ]
 )
