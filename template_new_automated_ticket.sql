@@ -53,14 +53,20 @@ VALUES
     -- Template entry for a Desktop Support task
     --
     -- * 'sysdocs' is the usual value for 'WIKI_PROJECT_SHORT_NAME_HERE'
-    -- * Valid values for FREQUENCY_HERE are (all lowercase): daily, twice_week, weekly, weekly_monday, weekly_tuesday, weekly_wednesday, weekly_thursday, weekly_friday, twice_month, monthly, twice_year, yearly
+    -- * Valid values for FREQUENCY_HERE are (all lowercase):
+    --      daily, twice_week, weekly, weekly_monday, weekly_tuesday,
+    --      weekly_wednesday, weekly_thursday, weekly_friday, twice_month,
+    --      monthly, twice_year, quarterly, yearly
     --   See the DATE_LABEL dictionary for an authoratative list.
     (1,@ds_email,'SUBJECT_LINE_TEMPLATE_HERE for {}','WIKI_PAGE_NAME_HERE','WIKI_PROJECT_SHORT_NAME_HERE',@ds,'CATEGORY_NAME_HERE',DUE_AFTER_DAYS_HERE_AS_UNQUOTED_NUMBER,'PRIORITY_HERE','frequency_here','OPTIONAL_COMMENT_HERE_REMOVE_THIS_IF_NOT_USING'),
 
     -- Template entry for a Server Support task
     --
     -- * 'sysdocs' is the usual value for 'WIKI_PROJECT_SHORT_NAME_HERE'
-    -- * Valid values for FREQUENCY_HERE are (all lowercase): daily, twice_week, weekly, weekly_monday, weekly_tuesday, weekly_wednesday, weekly_thursday, weekly_friday, twice_month, monthly, twice_year, yearly
+    -- * Valid values for FREQUENCY_HERE are (all lowercase):
+    --      daily, twice_week, weekly, weekly_monday, weekly_tuesday,
+    --      weekly_wednesday, weekly_thursday, weekly_friday, twice_month,
+    --      monthly, twice_year, quarterly, yearly
     --   See the DATE_LABEL dictionary for an authoratative list.
     (0,@ss_email,'SUBJECT_LINE_TEMPLATE_HERE for {}','WIKI_PAGE_NAME_HERE','WIKI_PROJECT_SHORT_NAME_HERE',@ss,'CATEGORY_NAME_HERE',DUE_AFTER_DAYS_HERE_AS_UNQUOTED_NUMBER,'PRIORITY_HERE','frequency_here','OPTIONAL_COMMENT_HERE_REMOVE_THIS_IF_NOT_USING')
 
