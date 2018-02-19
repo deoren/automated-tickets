@@ -1,0 +1,65 @@
+# Purpose: Control when the automated ticket scripts execute.
+
+# https://github.com/WhyAskWhy/automated-tickets
+
+
+# minute    hour    dom     month   dow     user        command
+# ------------------------------------------------------------------------------------------
+
+# Generate tickets every day of the week from Monday through Friday
+40          5       *       *       1-5     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "daily"
+
+# Generate "weekly" tickets on the day noted by the schedule keyword
+# Historically all weekly tasks were triggered on Friday. We call both versions of "weekly" here
+45          5       *       *       mon     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly_monday"
+45          5       *       *       tue     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly_tuesday"
+45          5       *       *       wed     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly_wednesday"
+45          5       *       *       thu     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly_thursday"
+45          5       *       *       fri     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly"
+45          5       *       *       fri     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly_friday"
+
+# Generate monthly tickets on the first day of each month
+55          5       1       *       *       scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "monthly"
+
+# Run on Mondays and Thursdays of each week
+47          5       *       *       mon,thu  scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "twice_week"
+
+# Run on 1st and 22nd of the month
+47          5       1,22    *       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "twice_month"
+
+# Run twice a year: January 1st and June 1st
+47          5       1    1,6       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "twice_year"
+
+# Run four times a year: The first of January, April, August, December
+47          5       1    1,4,8,12  *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "quarterly"
+
+
+# Run yearly on January 1st
+47          5       1    1       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly"
+
+
+
+# Example of job definition:
+# .---------------- minute (0 - 59)
+# |  .------------- hour (0 - 23)
+# |  |  .---------- day of month (1 - 31)
+# |  |  |  .------- month (1 - 12) OR jan,feb,mar,apr ...
+# |  |  |  |  .---- day of week (0 - 6) (Sunday=0 or 7) OR sun,mon,tue,wed,thu,fri,sat
+# |  |  |  |  |
+# *  *  *  *  * user-name  command to be executed
+
+
+
+# https://crontab.guru/every-weekday
+#
+#   *           any value
+#   ,           value list separator
+#   -           range of values
+#   /           step values
+#   @yearly     (non-standard)
+#   @annually   (non-standard)
+#   @monthly    (non-standard)
+#   @weekly     (non-standard)
+#   @daily      (non-standard)
+#   @hourly     (non-standard)
+#   @reboot     (non-standard)
