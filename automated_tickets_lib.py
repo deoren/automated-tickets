@@ -46,8 +46,8 @@ TODAY = DATE.strftime('%Y-%m-%d')
 
 # Disable various modes by default. Will be overriden by main script that
 # imports this module
-DISPLAY_DEBUG_MESSAGES = True
-DISPLAY_INFO_MESSAGES = True
+DISPLAY_DEBUG_MESSAGES = False
+DISPLAY_INFO_MESSAGES = False
 
 # Going to assume we want these by default, we can override in config file
 DISPLAY_WARNING_MESSAGES = True
