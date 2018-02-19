@@ -94,6 +94,7 @@ DATE_LABEL = {
     'twice_month':TODAY,
     'monthly':MONTH_YEAR,
     'twice_year':MONTH_YEAR,
+    'quarterly':MONTH_YEAR,
     'yearly':YEAR
 }
 
