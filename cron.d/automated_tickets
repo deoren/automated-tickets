@@ -17,6 +17,8 @@
 45          5       *       *       thu     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly_thursday"
 45          5       *       *       fri     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly"
 45          5       *       *       fri     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly_friday"
+45          5       *       *       sat     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly_saturday"
+45          5       *       *       sun     scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "weekly_sunday"
 
 # Generate monthly tickets on the first day of each month
 55          5       1       *       *       scripts       /opt/automated_tickets/automated_tickets.py --event_schedule "monthly"
