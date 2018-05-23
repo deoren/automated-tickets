@@ -441,6 +441,9 @@ def get_events(settings, event_schedule):
     events = []
     for event in mysql_cursor.fetchall():
 
+        # Prune whitespace from all fields
+        event = tuple([item.strip() if isinstance(item, str) else item for item in event])
+
         # Collect a list of all events we need to take action for
         events.append(Event(event))
 
