@@ -78,10 +78,10 @@ YEAR = date.strftime('%Y')
 # we will get the same result as what we're doing here
 TODAY = date.strftime('%Y-%m-%d')
 
-# These entries match up with the event schedule "keywords". For example,
-# when daily events are requested, active daily events will result in
-# notifications generated which have subject lines that include the value
-# that is paired with the keyword below.
+# These entries serve both as a mapping of display formats and also as
+# valid parameter values. For example, when daily events are requested,
+# active daily events will result in notifications generated which have
+# subject lines that include the value that is paired with the keyword below.
 DATE_LABEL = {
     'daily':TODAY,
     'twice_week':TODAY,
