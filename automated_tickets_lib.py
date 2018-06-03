@@ -91,6 +91,8 @@ DATE_LABEL = {
     'weekly_wednesday':TODAY,
     'weekly_thursday':TODAY,
     'weekly_friday':TODAY,
+    'weekly_saturday':TODAY,
+    'weekly_sunday':TODAY,
     'twice_month':TODAY,
     'monthly':MONTH_YEAR,
     'twice_year':MONTH_YEAR,

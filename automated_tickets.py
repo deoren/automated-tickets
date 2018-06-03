@@ -77,6 +77,8 @@ parser.add_argument(
         'weekly_wednesday',
         'weekly_thursday',
         'weekly_friday',
+        'weekly_saturday',
+        'weekly_sunday',
         'weekly',
         'twice_month',
         'monthly',
