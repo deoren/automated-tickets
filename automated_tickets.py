@@ -63,27 +63,13 @@ parser = argparse.ArgumentParser(
     )
 
 # This will need to be broken up later by the script
-# WARNING: This needs to be kept in sync with DATE_LABEL within
-# the library file.
 parser.add_argument(
     '--event_schedule',
     action='store',
     required=True,
-    choices=[
-        'daily',
-        'twice_week',
-        'weekly_monday',
-        'weekly_tuesday',
-        'weekly_wednesday',
-        'weekly_thursday',
-        'weekly_friday',
-        'weekly',
-        'twice_month',
-        'monthly',
-        'twice_year',
-        'quarterly',
-        'yearly'
-    ]
+
+    # Reuse keys from DATE_LABEL dict in library file instead of repeating here
+    choices=list(DATE_LABEL.keys())
 )
 
 # NOTE: Probably want to leave this as not required and fall back to checking
