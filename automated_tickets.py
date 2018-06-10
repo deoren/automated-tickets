@@ -17,42 +17,72 @@ matching the requested schedule.
 
 # parse command line arguments, 'sys.argv'
 import argparse
-
+import logging
+import logging.handlers
 import os
 import os.path
 import sys
 
 
+app_name = 'automated-tickets'
+
+# TODO: Configure formatter to log function/class info
+syslog_formatter = logging.Formatter('%(name)s - %(levelname)s - %(funcName)s - %(message)s')
+file_formatter = logging.Formatter('%(asctime)s - %(name)s - %(funcName)s - %(levelname)s - %(message)s')
+stdout_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(funcName)s - %(message)s')
+
+# Grab root logger and set initial logging level
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+
+# The SysLogHandler class, supports sending logging messages to a remote
+# or local Unix syslog.
+# TODO: Expose this value elsewhere; move to logging_config.json?
+syslog_socket = '/dev/log'
+try:
+    syslog_handler = logging.handlers.SysLogHandler(address=syslog_socket)
+except AttributeError:
+    # We're likely running on Windows, so use the NullHandler here
+    syslog_handler = logging.NullHandler
+else:
+    # Good thus far, finish configuring SysLogHandler
+    syslog_handler.ident = app_name + ": "
+    syslog_handler.setFormatter(syslog_formatter)
+    syslog_handler.setLevel(logging.INFO)
+
+console_handler = logging.StreamHandler(stream=sys.stdout)
+console_handler.setFormatter(stdout_formatter)
+# Apply lax logging level since we will use a filter to examine message levels
+# and compare against allowed levels set within the main config file. This
+# filter is added later once the settings config object has been constructed.
+console_handler.setLevel(logging.NOTSET)
+
+file_handler = logging.FileHandler(app_name + '.log', mode='a')
+file_handler.setFormatter(file_formatter)
+file_handler.setLevel(logging.DEBUG)
+
+# Create logger object that inherits from root and will be inherited by
+# all modules used by this project
+# Note: The console_handler is added later after the settings config object
+# has been constructed.
+app_logger = logging.getLogger(app_name)
+app_logger.addHandler(syslog_handler)
+app_logger.addHandler(file_handler)
+app_logger.setLevel(logging.DEBUG)
+
+log = app_logger.getChild(__name__)
+
+log.debug("Logging initialized for %s", __name__)
 
 
-##########################################################################
-# This controls output display prior to user configurable values
-# being read in and honored. Uncomment and disable/enable as needed
-# for debugging purposes
-#automated_tickets_lib.DISPLAY_DEBUG_MESSAGES = True
-#automated_tickets_lib.DISPLAY_INFO_MESSAGES = True
-#automated_tickets_lib.DISPLAY_WARNING_MESSAGES = True
-#automated_tickets_lib.DISPLAY_ERROR_MESSAGES = True
+# TODO: Setup support for reading in environmental variable value
+# in place of hard-coding values here.
 #
-# Basic import so that we can manipulate global variables
-import automated_tickets_lib
+import automated_tickets_lib as atlib
 ##########################################################################
 
 
-
-# Our custom classes
-from automated_tickets_lib import Settings
-
-# Consants
-from automated_tickets_lib import DATE_LABEL
-
-# Our custom "print" fuctions
-from automated_tickets_lib import print_debug, print_error, print_info, print_warning
-
-from automated_tickets_lib import get_events, get_wiki_page_contents, send_notification
-
-from automated_tickets_lib import get_include_calls, get_included_wiki_pages
-
+log.debug("Finished importing standard modules and our custom library modules.")
 
 ########################################################
 # Collect command-line arguments passed by Cron
@@ -69,7 +99,7 @@ parser.add_argument(
     required=True,
 
     # Reuse keys from DATE_LABEL dict in library file instead of repeating here
-    choices=list(DATE_LABEL.keys())
+    choices=list(atlib.DATE_LABEL.keys())
 )
 
 # NOTE: Probably want to leave this as not required and fall back to checking
@@ -78,16 +108,18 @@ parser.add_argument(
 parser.add_argument('--config_file', action='store', required=False)
 
 try:
+    log.info('Parsing commandline options')
     args = parser.parse_args()
-except Exception as e:
-    print_error("Unable to parse command-line arguments: {}".format(e), "argparse")
+except Exception as error:
+    log.exception("Unable to parse command-line arguments: %s", error)
     sys.exit(1)
 
 # NOTE: The command-line options parser enforces specific values and requires
 # that at least one of those values is present.
 event_schedule = args.event_schedule
 
-if args.config_file:
+# TODO: Confirm 'None' is correct fallback value
+if args.config_file is not None:
     global_config_file = args.config_file
 else:
     # FIXME:
@@ -132,39 +164,35 @@ config_file['global'] = global_config_file
 config_file_candidates = [config_file['global'], config_file['local']]
 
 # Generate configuration setting options
-print_debug(
-    "Passing in these config file locations for evalution: {}".format(
-        config_file_candidates), "CONFIG")
+log.debug(
+    "Passing in these config file locations for evalution: %s",
+    config_file_candidates)
 
-settings = Settings(config_file_candidates)
+log.info('Parsing config files')
+settings = atlib.Settings(config_file_candidates)
 
-# Controls status messages for each minor step of the process
-# (e.g., pulling data, writing data, what flags are enabled, etc.)
-DISPLAY_DEBUG_MESSAGES = settings.flags['display_debug_messages']
-automated_tickets_lib.DISPLAY_DEBUG_MESSAGES = DISPLAY_DEBUG_MESSAGES
-
-# Controls status messages for each major block
-# (e.g., finishing table updates, reporting rows affected, etc.)
-DISPLAY_INFO_MESSAGES = settings.flags['display_info_messages']
-automated_tickets_lib.DISPLAY_INFO_MESSAGES = DISPLAY_INFO_MESSAGES
-
-DISPLAY_WARNING_MESSAGES = settings.flags['display_warning_messages']
-automated_tickets_lib.DISPLAY_WARNING_MESSAGES = DISPLAY_WARNING_MESSAGES
-
-DISPLAY_ERROR_MESSAGES = settings.flags['display_error_messages']
-automated_tickets_lib.DISPLAY_ERROR_MESSAGES = DISPLAY_ERROR_MESSAGES
-
-
+# Now that the settings object has been properly created, lets use it to
+# finish configuring console logging for the main application logger.
+console_handler.addFilter(atlib.ConsoleFilterFunc(settings=settings))
+app_logger.addHandler(console_handler)
 
 # Troubleshooting config file flag boolean conversion
 for key, value in list(settings.flags.items()):
-    print_debug("key: '{}' value: '{}' type of value: '{}'".format(key, value, type(value)), "MySQL")
+    log.debug("key: '%s' value: '%s' type of value: '%s'",
+        key,
+        value,
+        type(value))
 
+if settings.flags['testing_mode']:
+    log.warning("Test warning message to prove that the INI flag works")
+    log.error("Test error message to prove that the INI flag works")
 
 # Generate list of matching events from database based on requested event
 # schedule (daily, weekly, etc.)
 events = []
-events = get_events(settings, event_schedule)
+
+log.info('Retrieving events')
+events = atlib.get_events(settings, event_schedule)
 
 message = {}
 
@@ -174,9 +202,7 @@ for event in events:
     # validity checks can be grouped together. This can simply be a reference
     # to those pre-computed values.
     # FIXME: Reintroduce support for multiple destination email addresses
-    message['envelope'] = "From: {}\nTo: {}\nSubject: {} ({})\n".format(
-        event.email_from_address, event.email_to_address,
-
+    message['subject'] = "{} ({})".format(
         # Formatting the prefix string before then using the result in
         # the larger format string we're building here
         # NOTE: Explicitly lowering the case of the dictionary key values
@@ -184,14 +210,21 @@ for event in events:
         # the associated value.
         # FIXME: Add try/except blocks around expansion so that any KeyError
         # exceptions can be caught and processing can continue.
-        event.email_subject_prefix.format(DATE_LABEL[event.event_schedule].lower()),
+        event.email_subject_prefix.format(atlib.DATE_LABEL[event.event_schedule].lower()),
         event.event_schedule.lower()
+    )
+    message['envelope'] = "From: {}\nTo: {}\nSubject: {}\n".format(
+        event.email_from_address, event.email_to_address, message['subject']
         )
 
-    print_debug(message['envelope'], "Email envelope details")
+    log.debug("Email envelope details: %s", message['envelope'])
 
     # If this task has a known due date ...
     if event.redmine_new_issue_due_date:
+        log.debug("Due date of %s is set for task: %s",
+            event.redmine_new_issue_due_date,
+            message['subject'])
+
         message['footer'] = "\nProject: {}\nCategory: {}\nStatus: {}\nPriority: {}\nDue date: {}\n".format(
             event.redmine_new_issue_project,
             event.redmine_new_issue_category,
@@ -200,6 +233,7 @@ for event in events:
             event.redmine_new_issue_due_date
         )
     else:
+        log.debug("No due date set for %s", message['envelope'])
         message['footer'] = "\nProject: {}\nCategory: {}\nStatus: {}\nPriority: {}\n".format(
             event.redmine_new_issue_project,
             event.redmine_new_issue_category,
@@ -207,8 +241,12 @@ for event in events:
             event.redmine_new_issue_priority
         )
 
+    log.debug("Fetching initial wiki page contents for page %s from project %s",
+        event.redmine_wiki_page_name,
+        event.redmine_wiki_page_project_shortname)
+
     # Get the raw contents of the wiki page associated with the event
-    wiki_page_contents = get_wiki_page_contents(
+    wiki_page_contents = atlib.get_wiki_page_contents(
         settings,
         event.redmine_wiki_page_name,
         event.redmine_wiki_page_project_shortname,
@@ -220,20 +258,29 @@ for event in events:
     # (dependency free) page is used as the body of the message
     if settings.flags['expand_include_macros_in_wiki_pages']:
 
+        log.debug("Enabled: Expand include macros found in wiki pages")
         # Check wiki_page_contents for include macro calls and build a
         # list of included pages to fetch the content from.
-        wiki_page_macro_calls = get_include_calls(
+        wiki_page_macro_calls = []
+        wiki_page_macro_calls = atlib.get_include_calls(
             wiki_page_contents,
             event.redmine_wiki_page_project_shortname
             )
 
+        log.debug("Include calls found: %s", bool(wiki_page_macro_calls))
+
+        # TODO: used in a strictly boolean context; from PEP8:
+        # For sequences, (strings, lists, tuples), use the fact that
+        # empty sequences are false
         while wiki_page_macro_calls:
 
-            print_debug(wiki_page_macro_calls)
+            log.debug("Wiki page include macro calls found: %s",
+                wiki_page_macro_calls)
 
             # proceed with getting the list of included pages
+            log.debug("Fetching included wiki pages ...")
             included_wiki_pages = []
-            included_wiki_pages = get_included_wiki_pages(
+            included_wiki_pages = atlib.get_included_wiki_pages(
                 wiki_page_macro_calls,
                 event.redmine_wiki_page_project_shortname)
 
@@ -241,7 +288,12 @@ for event in events:
             while included_wiki_pages:
                 wiki_page_to_process = included_wiki_pages.pop()
 
-                included_wiki_page_contents = get_wiki_page_contents(
+
+                log.debug("Fetching wiki page contents for included page %s from project %s",
+                    wiki_page_to_process,
+                    event.redmine_wiki_page_project_shortname)
+
+                included_wiki_page_contents = atlib.get_wiki_page_contents(
                     settings,
                     wiki_page_to_process,
                     event.redmine_wiki_page_project_shortname,
@@ -253,18 +305,21 @@ for event in events:
                     event.redmine_wiki_page_project_shortname,
                     wiki_page_to_process)
 
-                print_debug(search_value, "Search string for include call")
+                log.debug("Search string for include call: %s", search_value)
 
                 wiki_page_contents = wiki_page_contents.replace(search_value, included_wiki_page_contents)
 
             # After we have processed all initial include pages, check again to
             # see if pulling in the content from those included pages resulted
             # in us finding more include macro calls.
-            wiki_page_macro_calls = get_include_calls(
+            log.debug("Parsing wiki page contents for further include calls ...")
+            wiki_page_macro_calls = atlib.get_include_calls(
                 wiki_page_contents,
                 event.redmine_wiki_page_project_shortname
                 )
-
+    else:
+        log.debug("Disabled: Expand include macros found in wiki pages")
+        log.debug("Redmine will substitute macros with live include page contents")
 
     # Use wiki page contents as the message body. This is either the fully
     # expanded content after include macro calls have been processed or the
@@ -274,6 +329,7 @@ for event in events:
 
 
     # FIXME: Revisit this?
+    log.debug("FIXME: Leaving header empty")
     message['header'] = ""
 
     # Note:
@@ -289,5 +345,9 @@ for event in events:
     )
 
     # Send notification
-    send_notification(settings, event.email_from_address, event.email_to_address, email_message)
+    log.info('Sending email notification')
+    atlib.send_notification(settings, event.email_from_address, event.email_to_address, email_message)
 
+# Informs the logging system to perform an orderly shutdown by flushing and
+# closing all handlers.
+logging.shutdown()
