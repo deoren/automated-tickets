@@ -102,6 +102,15 @@ DATE_LABEL = {
 }
 
 
+# TODO: Extend this hard-coded list with dynamic "type:pattern" entries.
+# For example:
+#   2018_JUNE_09
+#   JUNE_09
+#   09
+#
+# In addition, the shorter *_9 (single digit vs double-digit single day)
+# should also be supported as a valid frequency.
+
 
 #######################################################
 # Classes
