@@ -22,7 +22,11 @@
 
 - https://dev.mysql.com/downloads/repo/apt/
 - https://dev.mysql.com/doc/mysql-apt-repo-quick-guide/en/
-- https://dev.mysql.com/downloads/connector/python/2.1.html
+
+- https://dev.mysql.com/doc/connector-python/en/
+- https://pypi.org/project/mysql-connector-python/
+
+
 
 ### SQLite
 
