@@ -21,14 +21,14 @@ import sys
 # Modules - Third party
 ########################################
 
-# Third-party module
-# https://pypi.python.org/pypi/MySQL-python/1.2.5
-# apt-get install python-mysqldb
-#import MySQLdb
-
-# Upstream module, recommended by MariaDB documentation
-# https://dev.mysql.com/downloads/repo/apt/
-# apt-get install mysql-connector-python
+# Upstream module, actively maintained and official recommendation
+# of the MariaDB project (per their documentation).
+# Available via OS packages (including apt repo) or pip.
+#
+# Examples:
+#
+# * sudo apt-get install mysql-connector-python
+# * pip install mysql-connector-python --user
 import mysql.connector as mysql
 
 
