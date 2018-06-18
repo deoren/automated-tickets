@@ -8,11 +8,63 @@ import logging.handlers
 import pprint
 import sys
 
-def get_valid_date_patterns(YYYYMMDD_DATE):
+supported_date_patterns = [
+    # Four digit year
+    '%Y%m%d',
+    '%Y_%m_%d',
+
+    # Two digit year
+    '%y%m%d',
+    '%y_%m_%d',
+
+    # Abbreviated month name
+    '%y_%b_%d',
+
+    # Full month name
+    '%y_%B_%d',
+]
+
+def convert_provided_date_string(YYYYMMDD_DATE):
+
+    conversion_error = False
+
+    # Any way to dynamically build this?
+    for date_pattern in supported_date_patterns:
+
+        try:
+            #>>> chosen_date = '2018-06-18'
+            #>>> datetime.datetime.strptime(chosen_date, '%Y-%m-%d')
+            #datetime.datetime(2018, 6, 18, 0, 0)
+
+            # Try to convert the provided string to a datetime object
+            date = datetime.datetime.strptime(YYYYMMDD_DATE, date_pattern)
+        except ValueError:
+            # Try to convert using the next pattern
+            conversion_error = True
+            continue
+        else:
+            # return the first successful conversion
+            return date
+
+    if conversion_error:
+
+        conversion_failure_message = \
+            "Provided date value does not match supported patterns ({})".format(
+                supported_date_patterns
+            )
+        # Raise exception to indicate that we failed to convert the
+        # requested "date" string to a valid datetime object
+        raise ValueError(conversion_failure_message)
+
+
+def get_valid_date_patterns(YYYYMMDD_DATE=datetime.date.today()):
+
+    """
+    Return valid date keywords for specified date. Uses current date if
+    not supplied.
+    """
 
     valid_date_patterns = []
-    specified_date = YYYYMMDD_DATE
-
 
     # TODO: What behavior should occur if we support YYYY-MM patterns?
     # Repeat the notification for every day that month?
@@ -21,16 +73,29 @@ def get_valid_date_patterns(YYYYMMDD_DATE):
     #   >>> date.strftime('%Y-%m')
     #   '2018-06'
 
-    # https://docs.python.org/3.5/library/datetime.html#strftime-and-strptime-behavior
-    date = datetime.date.today()
-    # date.strftime('%Y')
-    # '2018'
-    # >>> date.strftime('%Y-%M')
-    # '2018-00'
-    # >>> date.strftime('%Y-%m')
-    # '2018-06'
-    # >>> date.strftime('%Y-%m-%d')
-    # '2018-06-17'
+    if YYYYMMDD_DATE == datetime.date.today():
+
+        # Looks like we're using the default argument of using a datetime
+        # object using today's date.
+        date = YYYYMMDD_DATE
+    else:
+        try:
+            date = convert_provided_date_string(YYYYMMDD_DATE)
+        except ValueError:
+
+            # Fall back to using the current date if invalid value provided?
+            # The ramifications are that notifications may be generated for
+            # invalid dates. Things like "MUST DO THIS TODAY" could fire
+            # months/years in advance. Probably better to fail?
+
+            # Explicitly raise the error and let the caller deal with it
+            # to indicate that the chosen date is invalid. Let the caller
+            # try again (or give up as the situation demands)
+            raise
+
+
+    # Build valid date pattern "pieces" that we'll use to assemble supported
+    # date keywords
 
     this_month_abbrv = date.strftime('%b')
 
@@ -51,12 +116,6 @@ def get_valid_date_patterns(YYYYMMDD_DATE):
     # 9, 10, ...
     this_day_one_digit = date.strftime('%d').lstrip('0')
 
-    # JUNE_09
-    #
-    #>>> chosen_date = '2018-06-18'
-    #>>> datetime.datetime.strptime(chosen_date, '%Y-%m-%d')
-    #datetime.datetime(2018, 6, 18, 0, 0)
-
     # >>> datetime.datetime.strptime(chosen_date, '%Y%m%d')
     # Traceback (most recent call last):
     # File "<stdin>", line 1, in <module>
@@ -66,190 +125,65 @@ def get_valid_date_patterns(YYYYMMDD_DATE):
     #     (data_string, format))
     # ValueError: time data '2018-06-18' does not match format '%Y%m%d'
 
-    # TODO: Extend this hard-coded list with dynamic "type:pattern" entries.
-    # For example:
-    #   2018_JUNE_09
-    #   JUNE_09
-    #   09
-    #
-    # In addition, the shorter *_9 (single digit vs double-digit single day)
-    # should also be supported as a valid frequency.
+    # Build list of valid date keywords dynamically based off of
+    # separate year, month and day patterns. Use 'set' to prevent
+    # any duplicate items
 
-    #
-    # TODO: Can I build the entries dynamically with inner/outer loops?
-    #
-    #
-    #   year (four digit, two digit)
-    #   month (fullname, abbrv, two digit, one digit)
-    #   day (two digit, one digit)
-
-
-    # 2018_JUNE_09
-    date_yyyy_month_dd = "{}_{}_{}".format(
-        this_year_four_digit,
+    month_patterns = set([
+        this_month_abbrv,
         this_month_full_name,
-        this_day_two_digit
-    )
-
-    # 2018_JUNE_9
-    date_yyyy_month_d = "{}_{}_{}".format(
-        this_year_four_digit,
-        this_month_full_name,
-        this_day_one_digit
-    )
-    valid_date_patterns.append(date_yyyy_month_d)
-
-    # 18_JUNE_09
-    date_yy_month_dd = "{}_{}_{}".format(
-        this_year_two_digit,
-        this_month_full_name,
-        this_day_two_digit
-    )
-    valid_date_patterns.append(date_yy_month_dd)
-
-    # 18_JUNE_9
-    date_yy_month_d = "{}_{}_{}".format(
-        this_year_two_digit,
-        this_month_full_name,
-        this_day_one_digit
-    )
-    valid_date_patterns.append(date_yy_month_d)
-
-    # JUNE_09
-    date_month_dd = "{}_{}".format(
-        this_month_full_name,
-        this_day_two_digit
-    )
-    valid_date_patterns.append(date_month_dd)
-
-    # JUNE_9
-    date_month_d = "{}_{}".format(
-        this_month_full_name,
-        this_day_one_digit
-    )
-    valid_date_patterns.append(date_month_d)
-
-
-    ######################################
-    # numeric patterns
-    ######################################
-
-    # 2018_06_09
-    date_yyyy_mm_dd = "{}_{}_{}".format(
-        this_year_four_digit,
         this_month_two_digit,
-        this_day_two_digit
-    )
-    valid_date_patterns.append(date_yyyy_mm_dd)
+        this_month_one_digit
+    ])
+    month_patterns = list(month_patterns)
+    month_patterns.sort()
 
-    # 2018_06_9
-    date_yyyy_mm_d = "{}_{}_{}".format(
+    year_patterns = set([
         this_year_four_digit,
-        this_month_two_digit,
-        this_day_one_digit
-    )
-    valid_date_patterns.append(date_yyyy_mm_d)
+        this_year_two_digit
+    ])
+    year_patterns = list(year_patterns)
+    year_patterns.sort()
 
-    # 2018_6_9
-    date_yyyy_m_d = "{}_{}_{}".format(
-        this_year_four_digit,
-        this_month_one_digit,
+    day_patterns = set([
+        this_day_two_digit,
         this_day_one_digit
-    )
-    valid_date_patterns.append(date_yyyy_m_d)
+    ])
+    day_patterns = list(day_patterns)
+    day_patterns.sort()
 
-    # 18_06_09
-    date_yy_mm_dd = "{}_{}_{}".format(
-        this_year_two_digit,
-        this_month_full_name,
-        this_day_one_digit
-    )
-    valid_date_patterns.append(date_yy_mm_dd)
+    valid_date_patterns = []
 
-    # 18_06_9
-    date_yy_mm_d = "{}_{}_{}".format(
-        this_year_two_digit,
-        this_month_full_name,
-        this_day_one_digit
-    )
-    valid_date_patterns.append(date_yy_mm_d)
+    for month_pattern in month_patterns:
+        for year_pattern in year_patterns:
+            for day_pattern in day_patterns:
+                valid_date_patterns.append("{}-{}-{}".format(
+                    year_pattern,
+                    month_pattern,
+                    day_pattern
+                ))
 
-    # 18_6_9
-    date_yy_m_d = "{}_{}_{}".format(
-        this_year_two_digit,
-        this_month_full_name,
-        this_day_one_digit
-    )
-    valid_date_patterns.append(date_yy_m_d)
+    valid_date_patterns.sort()
 
+    return valid_date_patterns
+
+
+
+
+try:
+    patterns = get_valid_date_patterns('2018-01-10')
+
+# The function will attempt to convert the pattern found in the event
+# db entry. If the conversion fails, a ValueError exception is thrown.
+# In that case we do NOT wish to proceed as otherwise we could generate
+# event notifications for events that are not scheduled to occur yet.
+#
+# TODO: Perhaps have an admin or error reporting address receive
+# reports of invalid event entries? Perhaps that address could receive
+# reports instead of the originally intended reminder address?
+except ValueError as error:
+    # log error
+
+    print('Error converting requested date: {}'.format(error))
     pass
 
-#date = datetime.date.today()
-    #>>> chosen_date = '2018-06-18'
-    #>>> datetime.datetime.strptime(chosen_date, '%Y-%m-%d')
-    #datetime.datetime(2018, 6, 18, 0, 0)
-
-chosen_date = '2018-06-09'
-date = datetime.datetime.strptime(chosen_date, '%Y-%m-%d')
-
-
-this_month_abbrv = date.strftime('%b')
-
-this_year_four_digit = date.strftime('%Y')
-this_year_two_digit = date.strftime('%y')
-
-# zero-padded decimal number (01, 02, 03, ...)
-this_month_two_digit = date.strftime('%m')
-
-this_month_one_digit = date.strftime('%m').lstrip('0')
-
-# June, July, ...
-this_month_full_name = date.strftime('%B')
-
-# 09, 10, ...
-this_day_two_digit = date.strftime('%d')
-
-# 9, 10, ...
-this_day_one_digit = date.strftime('%d').lstrip('0')
-
-month_patterns = set([
-    this_month_abbrv,
-    this_month_full_name,
-    this_month_two_digit,
-    this_month_one_digit
-])
-month_patterns = list(month_patterns)
-month_patterns.sort()
-
-year_patterns = set([
-    this_year_four_digit,
-    this_year_two_digit
-])
-year_patterns = list(year_patterns)
-year_patterns.sort()
-
-day_patterns = set([
-    this_day_two_digit,
-    this_day_one_digit
-])
-day_patterns = list(day_patterns)
-day_patterns.sort()
-
-#pprint.pprint(year_patterns)
-#pprint.pprint(month_patterns)
-#pprint.pprint(day_patterns)
-
-valid_date_patterns = []
-
-for month_pattern in month_patterns:
-    for year_pattern in year_patterns:
-        for day_pattern in day_patterns:
-            valid_date_patterns.append("{}-{}-{}".format(
-                year_pattern,
-                month_pattern,
-                day_pattern
-            ))
-
-valid_date_patterns.sort()
-
-pprint.pprint(valid_date_patterns)
