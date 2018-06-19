@@ -108,7 +108,7 @@ base_supported_date_format_patterns = [
 
 
 
-def get_valid_format_strings(date_format_patterns):
+def get_valid_format_strings(date_format_patterns=base_supported_date_format_patterns):
     """
     Receives a list of dictionaries which specify valid format strings.
     Returns a list of the original format strings + variations of those
@@ -142,8 +142,7 @@ def convert_provided_date_string(date_string):
 
     conversion_error = False
 
-    format_strings = \
-        get_valid_format_strings(base_supported_date_format_patterns)
+    format_strings = get_valid_format_strings()
 
     # Any way to dynamically build this?
     for format_string in format_strings:
@@ -175,15 +174,14 @@ def convert_provided_date_string(date_string):
         raise ValueError(conversion_failure_message)
 
 
-def get_valid_date_patterns(date_string=datetime.date.today()):
+def get_valid_date_keywords(date_string=datetime.date.today()):
 
     """
     Return valid date keywords for specified date. Uses current date if
     not supplied.
     """
 
-    valid_format_strings = \
-        get_valid_format_strings(base_supported_date_format_patterns)
+    valid_format_strings = get_valid_format_strings()
 
     valid_date_patterns = []
 
@@ -237,8 +235,8 @@ def get_valid_date_patterns(date_string=datetime.date.today()):
 
 
 try:
-    #patterns = get_valid_date_patterns('2018-01-10')
-    patterns = get_valid_date_patterns('2017-01-07')
+    #patterns = get_valid_date_keywords('2018-01-10')
+    patterns = get_valid_date_keywords('2017-01-07')
 
     # Missing item from pattern (there may be others):
     #
@@ -273,7 +271,7 @@ try:
     # 'January_7']
 
 
-    #patterns = get_valid_date_patterns()
+    #patterns = get_valid_date_keywords()
 
 # The function will attempt to convert the pattern found in the event
 # db entry. If the conversion fails, a ValueError exception is thrown.
@@ -290,3 +288,28 @@ except ValueError as error:
     pass
 else:
     pprint.pprint(patterns)
+
+
+#for i in range(0, my_list_len):
+for date_pattern in base_supported_date_format_patterns:
+
+    # This is where some logic can be used to dynamically calculate
+    # the display value to the current day's date if it's not already
+    # explicitly set.
+    if 'display_name' in date_pattern:
+        display_name = date_pattern['display_name']
+    else:
+        display_name = ''
+
+    if 'name' in date_pattern:
+        name = date_pattern['name']
+    else:
+        # Would we also dynamically generate a name here?
+        name = ''
+
+    #print("date pattern is {}".format(date_pattern))
+    print("pattern {} format string: {}, display name: {}".format(
+        date_pattern['name'],
+        date_pattern['format_string'],
+        display_name
+        ))
