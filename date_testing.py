@@ -8,28 +8,60 @@ import logging.handlers
 import pprint
 import sys
 
-supported_date_patterns = [
+supported_date_format_patterns = [
+
+    # >>> d = {}
+    # >>> d['dict1'] = {}
+    # >>> d['dict1']['innerkey'] = 'value'
+    # >>> d
+    # {'dict1': {'innerkey': 'value'}}
+
+        {'daily':{
+            'display_string':'daily',
+            'format_string':'%Y-%m-%d',
+            }
+        },
+        # 'twice_week':TODAY,
+        # 'weekly':TODAY,
+        # 'weekly_monday':TODAY,
+        # 'weekly_tuesday':TODAY,
+        # 'weekly_wednesday':TODAY,
+        # 'weekly_thursday':TODAY,
+        # 'weekly_friday':TODAY,
+        # 'weekly_saturday':TODAY,
+        # 'weekly_sunday':TODAY,
+        # 'twice_month':TODAY,
+        # 'monthly':MONTH_YEAR,
+        # 'twice_year':MONTH_YEAR,
+        # 'quarterly':MONTH_YEAR,
+        # 'yearly':YEAR
+
+]
+
+
+supported_date_format_strings = [
     # Four digit year
-    '%Y%m%d',
     '%Y_%m_%d',
 
     # Two digit year
-    '%y%m%d',
     '%y_%m_%d',
 
     # Abbreviated month name
     '%y_%b_%d',
+    '%b_%d',
 
     # Full month name
     '%y_%B_%d',
+    '%B_%d',
+
 ]
 
-def convert_provided_date_string(YYYYMMDD_DATE):
+def convert_provided_date_string(date_string):
 
     conversion_error = False
 
     # Any way to dynamically build this?
-    for date_pattern in supported_date_patterns:
+    for date_pattern in supported_date_format_strings:
 
         try:
             #>>> chosen_date = '2018-06-18'
@@ -37,7 +69,7 @@ def convert_provided_date_string(YYYYMMDD_DATE):
             #datetime.datetime(2018, 6, 18, 0, 0)
 
             # Try to convert the provided string to a datetime object
-            date = datetime.datetime.strptime(YYYYMMDD_DATE, date_pattern)
+            date = datetime.datetime.strptime(date_string, date_pattern)
         except ValueError:
             # Try to convert using the next pattern
             conversion_error = True
@@ -49,15 +81,16 @@ def convert_provided_date_string(YYYYMMDD_DATE):
     if conversion_error:
 
         conversion_failure_message = \
-            "Provided date value does not match supported patterns ({})".format(
-                supported_date_patterns
+            "Provided date value of {} does not match supported patterns ({})".format(
+                date_string,
+                supported_date_format_strings
             )
         # Raise exception to indicate that we failed to convert the
         # requested "date" string to a valid datetime object
         raise ValueError(conversion_failure_message)
 
 
-def get_valid_date_patterns(YYYYMMDD_DATE=datetime.date.today()):
+def get_valid_date_patterns(date_string=datetime.date.today()):
 
     """
     Return valid date keywords for specified date. Uses current date if
@@ -73,14 +106,14 @@ def get_valid_date_patterns(YYYYMMDD_DATE=datetime.date.today()):
     #   >>> date.strftime('%Y-%m')
     #   '2018-06'
 
-    if YYYYMMDD_DATE == datetime.date.today():
+    if date_string == datetime.date.today():
 
         # Looks like we're using the default argument of using a datetime
         # object using today's date.
-        date = YYYYMMDD_DATE
+        date = date_string
     else:
         try:
-            date = convert_provided_date_string(YYYYMMDD_DATE)
+            date = convert_provided_date_string(date_string)
         except ValueError:
 
             # Fall back to using the current date if invalid value provided?
@@ -97,24 +130,24 @@ def get_valid_date_patterns(YYYYMMDD_DATE=datetime.date.today()):
     # Build valid date pattern "pieces" that we'll use to assemble supported
     # date keywords
 
-    this_month_abbrv = date.strftime('%b')
+    # this_month_abbrv = date.strftime('%b')
 
-    this_year_four_digit = date.strftime('%Y')
-    this_year_two_digit = date.strftime('%y')
+    # this_year_four_digit = date.strftime('%Y')
+    # this_year_two_digit = date.strftime('%y')
 
-    # zero-padded decimal number (01, 02, 03, ...)
-    this_month_two_digit = date.strftime('%m')
+    # # zero-padded decimal number (01, 02, 03, ...)
+    # this_month_two_digit = date.strftime('%m')
 
-    this_month_one_digit = date.strftime('%m').lstrip('0')
+    # this_month_one_digit = date.strftime('%m').lstrip('0')
 
-    # June, July, ...
-    this_month_full_name = date.strftime('%B')
+    # # June, July, ...
+    # this_month_full_name = date.strftime('%B')
 
-    # 09, 10, ...
-    this_day_two_digit = date.strftime('%d')
+    # # 09, 10, ...
+    # this_day_two_digit = date.strftime('%d')
 
-    # 9, 10, ...
-    this_day_one_digit = date.strftime('%d').lstrip('0')
+    # # 9, 10, ...
+    # this_day_one_digit = date.strftime('%d').lstrip('0')
 
     # >>> datetime.datetime.strptime(chosen_date, '%Y%m%d')
     # Traceback (most recent call last):
@@ -129,49 +162,64 @@ def get_valid_date_patterns(YYYYMMDD_DATE=datetime.date.today()):
     # separate year, month and day patterns. Use 'set' to prevent
     # any duplicate items
 
-    month_patterns = set([
-        this_month_abbrv,
-        this_month_full_name,
-        this_month_two_digit,
-        this_month_one_digit
-    ])
-    month_patterns = list(month_patterns)
-    month_patterns.sort()
+    # month_patterns = set([
+    #     this_month_abbrv,
+    #     this_month_full_name,
+    #     this_month_two_digit,
+    #     this_month_one_digit
+    # ])
+    # month_patterns = list(month_patterns)
+    # month_patterns.sort()
 
-    year_patterns = set([
-        this_year_four_digit,
-        this_year_two_digit
-    ])
-    year_patterns = list(year_patterns)
-    year_patterns.sort()
+    # year_patterns = set([
+    #     this_year_four_digit,
+    #     this_year_two_digit
+    # ])
+    # year_patterns = list(year_patterns)
+    # year_patterns.sort()
 
-    day_patterns = set([
-        this_day_two_digit,
-        this_day_one_digit
-    ])
-    day_patterns = list(day_patterns)
-    day_patterns.sort()
+    # day_patterns = set([
+    #     this_day_two_digit,
+    #     this_day_one_digit
+    # ])
+    # day_patterns = list(day_patterns)
+    # day_patterns.sort()
 
-    valid_date_patterns = []
+    # valid_date_patterns = []
 
-    for month_pattern in month_patterns:
-        for year_pattern in year_patterns:
-            for day_pattern in day_patterns:
-                valid_date_patterns.append("{}-{}-{}".format(
-                    year_pattern,
-                    month_pattern,
-                    day_pattern
-                ))
+    # for month_pattern in month_patterns:
+    #     for year_pattern in year_patterns:
+    #         for day_pattern in day_patterns:
+    #             valid_date_patterns.append("{}-{}-{}".format(
+    #                 year_pattern,
+    #                 month_pattern,
+    #                 day_pattern
+    #             ))
 
-    valid_date_patterns.sort()
+    for format_string in supported_date_format_strings:
 
-    return valid_date_patterns
+
+        date_keyword = date.strftime(format_string)
+        date_keyword_single_digit_day_month = date_keyword.replace('_0', "_")
+        date_keyword_single_digit_month_double_day = \
+            date_keyword.replace('_0', "_", 1)
+
+        valid_date_patterns.extend(
+            [date_keyword,
+            date_keyword_single_digit_day_month,
+            date_keyword_single_digit_month_double_day]
+        )
+
+        valid_date_patterns.sort()
+
+    return list(set(valid_date_patterns))
 
 
 
 
 try:
     patterns = get_valid_date_patterns('2018-01-10')
+    #patterns = get_valid_date_patterns()
 
 # The function will attempt to convert the pattern found in the event
 # db entry. If the conversion fails, a ValueError exception is thrown.
@@ -186,4 +234,6 @@ except ValueError as error:
 
     print('Error converting requested date: {}'.format(error))
     pass
+else:
+    pprint.pprint(patterns)
 
