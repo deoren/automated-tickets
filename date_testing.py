@@ -8,68 +8,153 @@ import logging.handlers
 import pprint
 import sys
 
-supported_date_format_patterns = [
 
-    # >>> d = {}
-    # >>> d['dict1'] = {}
-    # >>> d['dict1']['innerkey'] = 'value'
-    # >>> d
-    # {'dict1': {'innerkey': 'value'}}
+default_date_format_string = '%Y-%m-%d'
 
-        {'daily':{
-            'display_string':'daily',
-            'format_string':'%Y-%m-%d',
-            }
-        },
-        # 'twice_week':TODAY,
-        # 'weekly':TODAY,
-        # 'weekly_monday':TODAY,
-        # 'weekly_tuesday':TODAY,
-        # 'weekly_wednesday':TODAY,
-        # 'weekly_thursday':TODAY,
-        # 'weekly_friday':TODAY,
-        # 'weekly_saturday':TODAY,
-        # 'weekly_sunday':TODAY,
-        # 'twice_month':TODAY,
-        # 'monthly':MONTH_YEAR,
-        # 'twice_year':MONTH_YEAR,
-        # 'quarterly':MONTH_YEAR,
-        # 'yearly':YEAR
+base_supported_date_format_patterns = [
 
+    {
+        'format_string': default_date_format_string,
+        'name':'daily',
+    },
+    {
+        'format_string': default_date_format_string,
+        'name': 'twice_week',
+        'display_name': 'twice weekly',
+    },
+    {
+        'format_string': default_date_format_string,
+        'name':'weekly',
+    },
+    {
+        'format_string': default_date_format_string,
+        'name': 'weekly_monday',
+        'display_name': 'every monday',
+    },
+    {
+        'format_string': default_date_format_string,
+        'name': 'weekly_tuesday',
+        'display_name': 'every tuesday',
+    },
+    {
+        'format_string': default_date_format_string,
+        'name': 'weekly_wednesday',
+        'display_name': 'every wednesday',
+    },
+    {
+        'format_string': default_date_format_string,
+        'name': 'weekly_thursday',
+        'display_name': 'every thursday',
+    },
+    {
+        'format_string': default_date_format_string,
+        'name': 'weekly_friday',
+        'display_name': 'every friday',
+    },
+    {
+        'format_string': default_date_format_string,
+        'name': 'weekly_saturday',
+        'display_name': 'every saturday',
+    },
+    {
+        'format_string': default_date_format_string,
+        'name': 'weekly_sunday',
+        'display_name': 'every sunday',
+    },
+    {
+        'format_string': default_date_format_string,
+        'name': 'twice_month',
+        'display_name': 'twice monthly',
+    },
+    {
+        'format_string': '%B %Y',
+        'name':'monthly',
+    },
+    {
+        'format_string': '%B %Y',
+        'name': 'twice_year',
+        'display_name': 'twice yearly',
+    },
+    {
+        'format_string': '%B %Y',
+        'name':'quarterly',
+    },
+    {
+        'format_string': '%Y',
+        'name':'yearly',
+    },
+    # End stock keywords
+    {
+        # Full month name
+        'format_string': '%B_%d',
+    },
+    {
+        # Abbreviated month name
+        'format_string': '%b_%d',
+    },
+    {
+        'format_string': '%y_%b_%d',
+    },
+    {
+        'format_string': '%Y_%b_%d',
+    },
+    {
+        'format_string': '%y_%B_%d',
+    },
+    {
+        'format_string': '%Y_%B_%d',
+    },
 ]
 
 
-supported_date_format_strings = [
-    # Four digit year
-    '%Y_%m_%d',
 
-    # Two digit year
-    '%y_%m_%d',
+def get_valid_format_strings(date_format_patterns):
+    """
+    Receives a list of dictionaries which specify valid format strings.
+    Returns a list of the original format strings + variations of those
+    strings in order to permit additional date formats that users may wish
+    to use.
+    """
 
-    # Abbreviated month name
-    '%y_%b_%d',
-    '%b_%d',
+    format_strings = []
+    for pattern in date_format_patterns:
 
-    # Full month name
-    '%y_%B_%d',
-    '%B_%d',
+        # Create variations of format string to allow for additional supported
+        # patterns. We need to add that support here instead of later as
+        # additional supported keywords since these format strings are used
+        # for conversion.
+        #
+        # TODO: Are we validating in two places?
+        #
+        format_strings.append(pattern['format_string'].replace('_', "-"))
+        format_strings.append(pattern['format_string'].replace('-', "_"))
+        format_strings.append(pattern['format_string'].replace(' ', "_"))
+        format_strings.append(pattern['format_string'].replace(' ', "-"))
 
-]
+    # Toss duplicate entries
+    format_strings = list(set(format_strings))
+    format_strings.sort()
+
+    return format_strings
+
 
 def convert_provided_date_string(date_string):
 
     conversion_error = False
 
+    format_strings = \
+        get_valid_format_strings(base_supported_date_format_patterns)
+
     # Any way to dynamically build this?
-    for date_pattern in supported_date_format_strings:
+    for format_string in format_strings:
 
         try:
             #>>> chosen_date = '2018-06-18'
-            #>>> datetime.datetime.strptime(chosen_date, '%Y-%m-%d')
+            #>>> datetime.datetime.strptime(chosen_date, default_date_format_string)
             #datetime.datetime(2018, 6, 18, 0, 0)
 
             # Try to convert the provided string to a datetime object
-            date = datetime.datetime.strptime(date_string, date_pattern)
+            date = datetime.datetime.strptime(date_string, format_string)
         except ValueError:
             # Try to convert using the next pattern
             conversion_error = True
@@ -83,7 +168,7 @@ def convert_provided_date_string(date_string):
         conversion_failure_message = \
             "Provided date value of {} does not match supported patterns ({})".format(
                 date_string,
-                supported_date_format_strings
+                format_strings
             )
         # Raise exception to indicate that we failed to convert the
         # requested "date" string to a valid datetime object
@@ -96,6 +181,9 @@ def get_valid_date_patterns(date_string=datetime.date.today()):
     Return valid date keywords for specified date. Uses current date if
     not supplied.
     """
+
+    valid_format_strings = \
+        get_valid_format_strings(base_supported_date_format_patterns)
 
     valid_date_patterns = []
 
@@ -127,77 +215,7 @@ def get_valid_date_patterns(date_string=datetime.date.today()):
             raise
 
 
-    # Build valid date pattern "pieces" that we'll use to assemble supported
-    # date keywords
-
-    # this_month_abbrv = date.strftime('%b')
-
-    # this_year_four_digit = date.strftime('%Y')
-    # this_year_two_digit = date.strftime('%y')
-
-    # # zero-padded decimal number (01, 02, 03, ...)
-    # this_month_two_digit = date.strftime('%m')
-
-    # this_month_one_digit = date.strftime('%m').lstrip('0')
-
-    # # June, July, ...
-    # this_month_full_name = date.strftime('%B')
-
-    # # 09, 10, ...
-    # this_day_two_digit = date.strftime('%d')
-
-    # # 9, 10, ...
-    # this_day_one_digit = date.strftime('%d').lstrip('0')
-
-    # >>> datetime.datetime.strptime(chosen_date, '%Y%m%d')
-    # Traceback (most recent call last):
-    # File "<stdin>", line 1, in <module>
-    # File "C:\Program Files\Python36\lib\_strptime.py", line 565, in _strptime_datetime
-    #     tt, fraction = _strptime(data_string, format)
-    # File "C:\Program Files\Python36\lib\_strptime.py", line 362, in _strptime
-    #     (data_string, format))
-    # ValueError: time data '2018-06-18' does not match format '%Y%m%d'
-
-    # Build list of valid date keywords dynamically based off of
-    # separate year, month and day patterns. Use 'set' to prevent
-    # any duplicate items
-
-    # month_patterns = set([
-    #     this_month_abbrv,
-    #     this_month_full_name,
-    #     this_month_two_digit,
-    #     this_month_one_digit
-    # ])
-    # month_patterns = list(month_patterns)
-    # month_patterns.sort()
-
-    # year_patterns = set([
-    #     this_year_four_digit,
-    #     this_year_two_digit
-    # ])
-    # year_patterns = list(year_patterns)
-    # year_patterns.sort()
-
-    # day_patterns = set([
-    #     this_day_two_digit,
-    #     this_day_one_digit
-    # ])
-    # day_patterns = list(day_patterns)
-    # day_patterns.sort()
-
-    # valid_date_patterns = []
-
-    # for month_pattern in month_patterns:
-    #     for year_pattern in year_patterns:
-    #         for day_pattern in day_patterns:
-    #             valid_date_patterns.append("{}-{}-{}".format(
-    #                 year_pattern,
-    #                 month_pattern,
-    #                 day_pattern
-    #             ))
-
-    for format_string in supported_date_format_strings:
-
+    for format_string in valid_format_strings:
 
         date_keyword = date.strftime(format_string)
         date_keyword_single_digit_day_month = date_keyword.replace('_0', "_")
@@ -210,15 +228,51 @@ def get_valid_date_patterns(date_string=datetime.date.today()):
             date_keyword_single_digit_month_double_day]
         )
 
+        valid_date_patterns = list(set(valid_date_patterns))
         valid_date_patterns.sort()
 
-    return list(set(valid_date_patterns))
+    return valid_date_patterns
 
 
 
 
 try:
-    patterns = get_valid_date_patterns('2018-01-10')
+    #patterns = get_valid_date_patterns('2018-01-10')
+    patterns = get_valid_date_patterns('2017-01-07')
+
+    # Missing item from pattern (there may be others):
+    #
+    # * 17-Jan-7
+    #
+    #
+    # ['17-Jan-07',
+    # '17-January-07',
+    # '17_Jan_07',
+    # '17_Jan_7',
+    # '17_January_07',
+    # '17_January_7',
+    # '2017',
+    # '2017-01-07',
+    # '2017-Jan-07',
+    # '2017-January-07',
+    # '2017_01_07',
+    # '2017_1_07',
+    # '2017_1_7',
+    # '2017_Jan_07',
+    # '2017_Jan_7',
+    # '2017_January_07',
+    # '2017_January_7',
+    # 'Jan-07',
+    # 'Jan_07',
+    # 'Jan_7',
+    # 'January 2017',
+    # 'January-07',
+    # 'January-2017',
+    # 'January_07',
+    # 'January_2017',
+    # 'January_7']
+
+
     #patterns = get_valid_date_patterns()
 
 # The function will attempt to convert the pattern found in the event
@@ -236,4 +290,3 @@ except ValueError as error:
     pass
 else:
     pprint.pprint(patterns)
-
