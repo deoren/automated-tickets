@@ -57,6 +57,8 @@ log.debug("Logging initialized for %s", __name__)
 log.debug("Attempting to import mysql.connector module")
 import mysql.connector as mysql
 
+# datetime replacement; support for additional format strings
+import pendulum
 
 #######################################################
 # Variables, constants
@@ -67,22 +69,169 @@ DATE = datetime.date.today()
 TODAY = DATE.strftime('%Y-%m-%d')
 
 
-# TODO: Am I using these or SQL generated date values?
-date = datetime.date.today()
-WEEK = date.strftime('week %U')
-WEEK_YEAR = date.strftime('week %U, %Y')
-MONTH = date.strftime('%B')
-MONTH_YEAR = date.strftime('%B %Y')
-YEAR = date.strftime('%Y')
+# Timezone of the server hosting this script
+# TODO: Set this automatically based on OS setting
+#OUR_TIMEZONE = 'America/Chicago'
+OUR_TIMEZONE = pendulum.now().timezone
 
-# NOTE: If we use datetime.date.today() or date as set above
-# we will get the same result as what we're doing here
-TODAY = date.strftime('%Y-%m-%d')
+DEFAULT_DATE_FORMAT_STRING = 'YYYY-MM-DD'
 
-# These entries serve both as a mapping of display formats and also as
-# valid parameter values. For example, when daily events are requested,
-# active daily events will result in notifications generated which have
-# subject lines that include the value that is paired with the keyword below.
+# Pre-defined static keywords that directly correspond to keyword references
+# within the provided cron.d file. Primarily for common reoccuring patterns.
+static_supported_date_format_patterns = [
+
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name':'daily',
+    },
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name': 'twice_week',
+        'display_name': 'twice weekly',
+    },
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name':'weekly',
+    },
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name': 'weekly_monday',
+        'display_name': 'every monday',
+    },
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name': 'weekly_tuesday',
+        'display_name': 'every tuesday',
+    },
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name': 'weekly_wednesday',
+        'display_name': 'every wednesday',
+    },
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name': 'weekly_thursday',
+        'display_name': 'every thursday',
+    },
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name': 'weekly_friday',
+        'display_name': 'every friday',
+    },
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name': 'weekly_saturday',
+        'display_name': 'every saturday',
+    },
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name': 'weekly_sunday',
+        'display_name': 'every sunday',
+    },
+    {
+        'format_string': DEFAULT_DATE_FORMAT_STRING,
+        'name': 'twice_month',
+        'display_name': 'twice monthly',
+    },
+    {
+        'format_string': 'MMMM YYYY',
+        'name':'monthly',
+    },
+    {
+        'format_string': 'MMMM YYYY',
+        'name': 'twice_year',
+        'display_name': 'twice yearly',
+    },
+    {
+        'format_string': 'MMMM YYYY',
+        'name':'quarterly',
+    },
+    {
+        # TODO: This one is going to be problematic.
+        'format_string': 'YYYY',
+        'name':'yearly',
+    },
+    # End stock keywords
+]
+
+dynamic_supported_date_format_patterns = [
+
+    # Full year
+    {
+        'format_string': 'YYYY_MMMM_DD',
+    },
+    {
+        'format_string': 'YYYY_MMM_DD',
+    },
+    {
+        'format_string': 'YYYY_MM_DD',
+    },
+    {
+        'format_string': 'YYYY_M_DD',
+    },
+
+    {
+        'format_string': 'YYYY_MMMM_D',
+    },
+    {
+        'format_string': 'YYYY_MMM_D',
+    },
+    {
+        'format_string': 'YYYY_MM_D',
+    },
+    {
+        'format_string': 'YYYY_M_D',
+    },
+
+    # Partial year
+    {
+        'format_string': 'YY_MMMM_DD',
+    },
+    {
+        'format_string': 'YY_MMM_DD',
+    },
+    {
+        'format_string': 'YY_MM_DD',
+    },
+    {
+        'format_string': 'YY_M_DD',
+    },
+
+    {
+        'format_string': 'YY_MMMM_D',
+    },
+    {
+        'format_string': 'YY_MMM_D',
+    },
+    {
+        'format_string': 'YY_MM_D',
+    },
+    {
+        'format_string': 'YY_M_D',
+    },
+
+    # Full month name
+    {
+
+        'format_string': 'MMMM_DD',
+    },
+    {
+        'format_string': 'MMMM_D',
+    },
+
+    # Abbreviated month name
+    {
+        'format_string': 'MMM_DD',
+    },
+    {
+        'format_string': 'MMM_D',
+    },
+
+
+]
+
+
+
 DATE_LABEL = {
     'daily':TODAY,
     'twice_week':TODAY,
@@ -569,3 +718,128 @@ def send_notification(settings, from_address, to_address, message):
         #server.set_debuglevel(1)
         server.sendmail(from_address, to_address, message)
         server.quit()
+
+def get_valid_format_strings(date_format_patterns=dynamic_supported_date_format_patterns):
+    """
+    Receives a list of dictionaries which specify valid format strings to be
+    used for dynamically generating date keywords.
+
+    Returns a list of the original format strings + variations of those
+    strings in order to permit additional date formats that users may wish
+    to use.
+    """
+
+    format_strings = []
+
+    for pattern in date_format_patterns:
+
+        # Create variations of format string to allow support for both
+        # underscores as well as dashes.
+        format_strings.append(pattern['format_string'])
+        format_strings.append(pattern['format_string'].replace('_', "-"))
+
+    # Toss any duplicates
+    format_strings = list(set(format_strings))
+    format_strings.sort()
+
+    return format_strings
+
+
+def convert_provided_date_string(date_string):
+
+    conversion_error = False
+
+    format_strings = get_valid_format_strings()
+
+    for format_string in format_strings:
+
+        try:
+            date = pendulum.from_format(
+                date_string,
+                format_string,
+                tz=OUR_TIMEZONE,
+                locale="en")
+        except ValueError as error:
+            # Try to convert using the next pattern
+            print("Failed to convert {} using {} format code: {}".format(
+                date_string,
+                format_string,
+                error
+            ))
+            conversion_error = True
+            continue
+        else:
+            # return the first successful conversion
+            print("{} was converted from format string {} and is of type {}".format(
+                date,
+                format_string,
+                type(date)
+                ))
+            print(date.year)
+            return date
+
+    if conversion_error:
+
+        conversion_failure_message = \
+            "Provided date value of {} does not match supported patterns ({})".format(
+                date_string,
+                format_strings
+            )
+        # Raise exception to indicate that we failed to convert the
+        # requested "date" string to a valid datetime object
+        raise ValueError(conversion_failure_message)
+
+
+def get_valid_date_keywords(date_string=pendulum.today()):
+
+    """
+    Return valid date keywords for specified date. Uses current date if
+    not supplied.
+    """
+
+    valid_format_strings = get_valid_format_strings()
+
+    valid_date_keywords = []
+
+    # TODO: What behavior should occur if we support YYYY-MM patterns?
+    # Repeat the notification for every day that month?
+    #
+    #   >>> date = datetime.date.today()
+    #   >>> date.strftime('%Y-%m')
+    #   '2018-06'
+
+    # Check to see if we're using the default DateTime function argument
+    if isinstance(date_string, pendulum.DateTime):
+
+        # Looks like we're using the default argument of using a datetime
+        # object using today's date.
+        date = date_string
+    else:
+        try:
+            date = convert_provided_date_string(date_string)
+        except ValueError:
+
+            # Fall back to using the current date if invalid value provided?
+            # The ramifications are that notifications may be generated for
+            # invalid dates. Things like "MUST DO THIS TODAY" could fire
+            # months/years in advance. Probably better to fail?
+
+            # Explicitly raise the error and let the caller deal with it
+            # to indicate that the chosen date is invalid. Let the caller
+            # try again (or give up as the situation demands)
+            raise
+
+
+    for format_string in valid_format_strings:
+
+        date_keyword = date.format(format_string)
+        valid_date_keywords.append(date_keyword)
+
+        # Throw away any duplicates, sort what remains
+        valid_date_keywords = list(set(valid_date_keywords))
+        valid_date_keywords.sort()
+
+        # Force all keywords to upper case for consistency
+        valid_date_keywords = [x.upper() for x in valid_date_keywords]
+    return valid_date_keywords
+

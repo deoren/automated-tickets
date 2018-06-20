@@ -15,6 +15,9 @@ our_timezone = 'America/Chicago'
 
 default_date_format_string = 'YYYY-MM-DD'
 
+# Pre-defined static keywords that directly correspond to keyword references
+# within the provided cron.d file. Limited number, primarily for common
+# reoccuring patterns.
 static_supported_date_format_patterns = [
 
     {
@@ -121,31 +124,31 @@ dynamic_supported_date_format_patterns = [
     },
 
     # Partial year
-    # {
-    #     'format_string': 'YY_MMMM_DD',
-    # },
-    # {
-    #     'format_string': 'YY_MMM_DD',
-    # },
-    # {
-    #     'format_string': 'YY_MM_DD',
-    # },
-    # {
-    #     'format_string': 'YY_M_DD',
-    # },
+    {
+        'format_string': 'YY_MMMM_DD',
+    },
+    {
+        'format_string': 'YY_MMM_DD',
+    },
+    {
+        'format_string': 'YY_MM_DD',
+    },
+    {
+        'format_string': 'YY_M_DD',
+    },
 
-    # {
-    #     'format_string': 'YY_MMMM_D',
-    # },
-    # {
-    #     'format_string': 'YY_MMM_D',
-    # },
-    # {
-    #     'format_string': 'YY_MM_D',
-    # },
-    # {
-    #     'format_string': 'YY_M_D',
-    # },
+    {
+        'format_string': 'YY_MMMM_D',
+    },
+    {
+        'format_string': 'YY_MMM_D',
+    },
+    {
+        'format_string': 'YY_MM_D',
+    },
+    {
+        'format_string': 'YY_M_D',
+    },
 
     # Full month name
     {
@@ -169,7 +172,8 @@ dynamic_supported_date_format_patterns = [
 
 
 
-
+# TODO: Append to the original list/dictionary structure instead of
+# creating a separate list. Perhaps create objects instead?
 def get_valid_format_strings(date_format_patterns=dynamic_supported_date_format_patterns):
     """
     Receives a list of dictionaries which specify valid format strings to be
@@ -240,8 +244,19 @@ def convert_provided_date_string(date_string):
         # requested "date" string to a valid datetime object
         raise ValueError(conversion_failure_message)
 
+def get_valid_static_keywords(static_keywords):
+    """
+    Utility function to return a list of pre-defined static keywords that
+    directly correspond to keyword references within the provided cron.d
+    file.
+    """
 
-def get_valid_date_keywords(date_string=pendulum.today()):
+    # TODO: Validation?
+    return static_keywords
+
+
+def get_valid_date_keywords(date_string=pendulum.today(),
+    date_format_patterns=dynamic_supported_date_format_patterns):
 
     """
     Return valid date keywords for specified date. Uses current date if
@@ -290,6 +305,8 @@ def get_valid_date_keywords(date_string=pendulum.today()):
         valid_date_keywords = list(set(valid_date_keywords))
         valid_date_keywords.sort()
 
+        # Force all keywords to upper case for consistency
+        valid_date_keywords = [x.upper() for x in valid_date_keywords]
     return valid_date_keywords
 
 
@@ -310,13 +327,26 @@ try:
 # reports of invalid event entries? Perhaps that address could receive
 # reports instead of the originally intended reminder address?
 except ValueError as error:
-    # log error
-
     print('Error converting requested date: {}'.format(error))
-    pass
 else:
+    print("List of dynamic keywords:")
     pprint.pprint(dynamic_keywords)
 
+
+
+
+try:
+    static_keywords = \
+        get_valid_static_keywords(static_supported_date_format_patterns)
+except ValueError as error:
+    # log error
+    print('Error retrieving static keywords: {}'.format(error))
+else:
+    print("List of static keywords:")
+    pprint.pprint(static_keywords)
+
+
+sys.exit()
 
 #for i in range(0, my_list_len):
 for date_pattern in dynamic_supported_date_format_patterns:

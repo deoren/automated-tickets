@@ -33,6 +33,11 @@
 - https://stackoverflow.com/questions/3968669/how-to-configure-logging-to-syslog-in-python
 - [Writing to syslog with Python's logging library](https://gist.github.com/sweenzor/1782457)
 
+### Date/Time
+
+- https://pendulum.eustace.io/docs/
+- https://docs.python.org/3.5/library/datetime.html
+
 ### SQLite
 
 - The Python Standard Library by Example, 7.5.1, 7.5.9
