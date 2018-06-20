@@ -5,13 +5,17 @@
 import datetime
 import logging
 import logging.handlers
+import pendulum
 import pprint
 import sys
 
+# Timezone of the server hosting this script
+# TODO: Set this automatically based on OS setting
+our_timezone = 'America/Chicago'
 
-default_date_format_string = '%Y-%m-%d'
+default_date_format_string = 'YYYY-MM-DD'
 
-base_supported_date_format_patterns = [
+static_supported_date_format_patterns = [
 
     {
         'format_string': default_date_format_string,
@@ -67,71 +71,125 @@ base_supported_date_format_patterns = [
         'display_name': 'twice monthly',
     },
     {
-        'format_string': '%B %Y',
+        'format_string': 'MMMM YYYY',
         'name':'monthly',
     },
     {
-        'format_string': '%B %Y',
+        'format_string': 'MMMM YYYY',
         'name': 'twice_year',
         'display_name': 'twice yearly',
     },
     {
-        'format_string': '%B %Y',
+        'format_string': 'MMMM YYYY',
         'name':'quarterly',
     },
     {
-        'format_string': '%Y',
+        # TODO: This one is going to be problematic.
+        'format_string': 'YYYY',
         'name':'yearly',
     },
     # End stock keywords
+]
+
+dynamic_supported_date_format_patterns = [
+
+    # Full year
     {
-        # Full month name
-        'format_string': '%B_%d',
+        'format_string': 'YYYY_MMMM_DD',
     },
     {
-        # Abbreviated month name
-        'format_string': '%b_%d',
+        'format_string': 'YYYY_MMM_DD',
     },
     {
-        'format_string': '%y_%b_%d',
+        'format_string': 'YYYY_MM_DD',
     },
     {
-        'format_string': '%Y_%b_%d',
+        'format_string': 'YYYY_M_DD',
+    },
+
+    {
+        'format_string': 'YYYY_MMMM_D',
     },
     {
-        'format_string': '%y_%B_%d',
+        'format_string': 'YYYY_MMM_D',
     },
     {
-        'format_string': '%Y_%B_%d',
+        'format_string': 'YYYY_MM_D',
     },
+    {
+        'format_string': 'YYYY_M_D',
+    },
+
+    # Partial year
+    # {
+    #     'format_string': 'YY_MMMM_DD',
+    # },
+    # {
+    #     'format_string': 'YY_MMM_DD',
+    # },
+    # {
+    #     'format_string': 'YY_MM_DD',
+    # },
+    # {
+    #     'format_string': 'YY_M_DD',
+    # },
+
+    # {
+    #     'format_string': 'YY_MMMM_D',
+    # },
+    # {
+    #     'format_string': 'YY_MMM_D',
+    # },
+    # {
+    #     'format_string': 'YY_MM_D',
+    # },
+    # {
+    #     'format_string': 'YY_M_D',
+    # },
+
+    # Full month name
+    {
+
+        'format_string': 'MMMM_DD',
+    },
+    {
+        'format_string': 'MMMM_D',
+    },
+
+    # Abbreviated month name
+    {
+        'format_string': 'MMM_DD',
+    },
+    {
+        'format_string': 'MMM_D',
+    },
+
+
 ]
 
 
 
-def get_valid_format_strings(date_format_patterns=base_supported_date_format_patterns):
+
+def get_valid_format_strings(date_format_patterns=dynamic_supported_date_format_patterns):
     """
-    Receives a list of dictionaries which specify valid format strings.
+    Receives a list of dictionaries which specify valid format strings to be
+    used for dynamically generating date keywords.
+
     Returns a list of the original format strings + variations of those
     strings in order to permit additional date formats that users may wish
     to use.
     """
 
     format_strings = []
+
     for pattern in date_format_patterns:
 
-        # Create variations of format string to allow for additional supported
-        # patterns. We need to add that support here instead of later as
-        # additional supported keywords since these format strings are used
-        # for conversion.
-        #
-        # TODO: Are we validating in two places?
-        #
+        # Create variations of format string to allow support for both
+        # underscores as well as dashes.
+        format_strings.append(pattern['format_string'])
         format_strings.append(pattern['format_string'].replace('_', "-"))
-        format_strings.append(pattern['format_string'].replace('-', "_"))
-        format_strings.append(pattern['format_string'].replace(' ', "_"))
-        format_strings.append(pattern['format_string'].replace(' ', "-"))
 
-    # Toss duplicate entries
+    # Toss any duplicates
     format_strings = list(set(format_strings))
     format_strings.sort()
 
@@ -144,22 +202,31 @@ def convert_provided_date_string(date_string):
 
     format_strings = get_valid_format_strings()
 
-    # Any way to dynamically build this?
     for format_string in format_strings:
 
         try:
-            #>>> chosen_date = '2018-06-18'
-            #>>> datetime.datetime.strptime(chosen_date, default_date_format_string)
-            #datetime.datetime(2018, 6, 18, 0, 0)
-
-            # Try to convert the provided string to a datetime object
-            date = datetime.datetime.strptime(date_string, format_string)
-        except ValueError:
+            date = pendulum.from_format(
+                date_string,
+                format_string,
+                tz=our_timezone,
+                locale="en")
+        except ValueError as error:
             # Try to convert using the next pattern
+            print("Failed to convert {} using {} format code: {}".format(
+                date_string,
+                format_string,
+                error
+            ))
             conversion_error = True
             continue
         else:
             # return the first successful conversion
+            print("{} was converted from format string {} and is of type {}".format(
+                date,
+                format_string,
+                type(date)
+                ))
+            print(date.year)
             return date
 
     if conversion_error:
@@ -174,7 +241,7 @@ def convert_provided_date_string(date_string):
         raise ValueError(conversion_failure_message)
 
 
-def get_valid_date_keywords(date_string=datetime.date.today()):
+def get_valid_date_keywords(date_string=pendulum.today()):
 
     """
     Return valid date keywords for specified date. Uses current date if
@@ -183,7 +250,7 @@ def get_valid_date_keywords(date_string=datetime.date.today()):
 
     valid_format_strings = get_valid_format_strings()
 
-    valid_date_patterns = []
+    valid_date_keywords = []
 
     # TODO: What behavior should occur if we support YYYY-MM patterns?
     # Repeat the notification for every day that month?
@@ -192,7 +259,8 @@ def get_valid_date_keywords(date_string=datetime.date.today()):
     #   >>> date.strftime('%Y-%m')
     #   '2018-06'
 
-    if date_string == datetime.date.today():
+    # Check to see if we're using the default DateTime function argument
+    if isinstance(date_string, pendulum.DateTime):
 
         # Looks like we're using the default argument of using a datetime
         # object using today's date.
@@ -215,63 +283,23 @@ def get_valid_date_keywords(date_string=datetime.date.today()):
 
     for format_string in valid_format_strings:
 
-        date_keyword = date.strftime(format_string)
-        date_keyword_single_digit_day_month = date_keyword.replace('_0', "_")
-        date_keyword_single_digit_month_double_day = \
-            date_keyword.replace('_0', "_", 1)
+        date_keyword = date.format(format_string)
+        valid_date_keywords.append(date_keyword)
 
-        valid_date_patterns.extend(
-            [date_keyword,
-            date_keyword_single_digit_day_month,
-            date_keyword_single_digit_month_double_day]
-        )
+        # Throw away any duplicates, sort what remains
+        valid_date_keywords = list(set(valid_date_keywords))
+        valid_date_keywords.sort()
 
-        valid_date_patterns = list(set(valid_date_patterns))
-        valid_date_patterns.sort()
-
-    return valid_date_patterns
+    return valid_date_keywords
 
 
 
 
 try:
     #patterns = get_valid_date_keywords('2018-01-10')
-    patterns = get_valid_date_keywords('2017-01-07')
-
-    # Missing item from pattern (there may be others):
-    #
-    # * 17-Jan-7
-    #
-    #
-    # ['17-Jan-07',
-    # '17-January-07',
-    # '17_Jan_07',
-    # '17_Jan_7',
-    # '17_January_07',
-    # '17_January_7',
-    # '2017',
-    # '2017-01-07',
-    # '2017-Jan-07',
-    # '2017-January-07',
-    # '2017_01_07',
-    # '2017_1_07',
-    # '2017_1_7',
-    # '2017_Jan_07',
-    # '2017_Jan_7',
-    # '2017_January_07',
-    # '2017_January_7',
-    # 'Jan-07',
-    # 'Jan_07',
-    # 'Jan_7',
-    # 'January 2017',
-    # 'January-07',
-    # 'January-2017',
-    # 'January_07',
-    # 'January_2017',
-    # 'January_7']
-
-
-    #patterns = get_valid_date_keywords()
+    #dynamic_keywords = get_valid_date_keywords('2017-01-07')
+    dynamic_keywords = get_valid_date_keywords()
+    #dynamic_keywords = get_valid_date_keywords('02-03-04')
 
 # The function will attempt to convert the pattern found in the event
 # db entry. If the conversion fails, a ValueError exception is thrown.
@@ -287,11 +315,11 @@ except ValueError as error:
     print('Error converting requested date: {}'.format(error))
     pass
 else:
-    pprint.pprint(patterns)
+    pprint.pprint(dynamic_keywords)
 
 
 #for i in range(0, my_list_len):
-for date_pattern in base_supported_date_format_patterns:
+for date_pattern in dynamic_supported_date_format_patterns:
 
     # This is where some logic can be used to dynamically calculate
     # the display value to the current day's date if it's not already
@@ -301,6 +329,7 @@ for date_pattern in base_supported_date_format_patterns:
     else:
         display_name = ''
 
+    # Only the baked-in keywords have a "name" key/value entry
     if 'name' in date_pattern:
         name = date_pattern['name']
     else:
@@ -309,7 +338,7 @@ for date_pattern in base_supported_date_format_patterns:
 
     #print("date pattern is {}".format(date_pattern))
     print("pattern {} format string: {}, display name: {}".format(
-        date_pattern['name'],
+        name,
         date_pattern['format_string'],
         display_name
         ))
