@@ -98,7 +98,10 @@ parser.add_argument(
     action='store',
     required=True,
 
-    # Reuse keys from DATE_LABEL dict in library file instead of repeating here
+    # TODO: Need to build that combined list?
+    #
+    # Use combined list of static keywords and keywords generated dynamically
+    # from the current date.
     choices=list(atlib.DATE_LABEL.keys())
 )
 
@@ -194,7 +197,19 @@ events = []
 log.info('Retrieving events')
 events = atlib.get_events(settings, event_schedule)
 
-message = {}
+# TODO: Build list of keywords here
+static_keywords = atlib.get_valid_static_keywords()
+dynamic_keywords = ['placeholder']
+
+# TODO: Need to make sure the right key/value is referenced here
+keywords = static_keywords.extend(dynamic_keywords)
+
+for keyword in keywords:
+
+    # TODO: This needs to be updated to receive multiple keywords.
+    events = atlib.get_events(settings, event_schedule)
+
+    message = {}
 
 for event in events:
 

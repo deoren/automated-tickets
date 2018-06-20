@@ -244,7 +244,7 @@ def convert_provided_date_string(date_string):
         # requested "date" string to a valid datetime object
         raise ValueError(conversion_failure_message)
 
-def get_valid_static_keywords(static_keywords):
+def get_valid_static_keywords(static_keywords=static_supported_date_format_patterns):
     """
     Utility function to return a list of pre-defined static keywords that
     directly correspond to keyword references within the provided cron.d

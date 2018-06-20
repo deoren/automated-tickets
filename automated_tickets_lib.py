@@ -843,3 +843,12 @@ def get_valid_date_keywords(date_string=pendulum.today()):
         valid_date_keywords = [x.upper() for x in valid_date_keywords]
     return valid_date_keywords
 
+def get_valid_static_keywords(static_keywords=static_supported_date_format_patterns):
+    """
+    Utility function to return a list of pre-defined static keywords that
+    directly correspond to keyword references within the provided cron.d
+    file.
+    """
+
+    # TODO: Validation?
+    return static_keywords
