@@ -5,31 +5,68 @@ branched and squashed/merged any successful results back to master.
 
 Well, that or the notes merged into a larger doc file.
 
-## Handling predefined date keywords
+## Handling keywords: static, dynamic
 
-Somehow I'll need to find a way to associate specific pre-existing keywords
-with specific dates for execution.
+As of this writing, this is my plan for handling keywords:
 
-In short, how does "yearly" map to a specific month/day?
+- static keywords
+    - composed of preset frequencies
 
-One option here is to keep the behavior of using those predefined keywords
-as a command-line option referenced from a cron job entry. If there is
-an entry in the `base_supported_date_format_patterns` data structure (or
-whatever I take to calling it later) with a matching `name` key, then matching
-events in the database are reported.
+- dynamic keyword
+    - composed of date patterns
 
-## Handling specific dates
+Currently static keywords rely on cron calling the script at specified
+intervals with an appropriate "static" keyword (e.g., `monthly`, `daily`,
+`weekly`). To better support both static and dynamic keywords, I'm thinking
+that the cron.d file will be reduced (at least to begin with) a daily call
+and then move the keyword/frequency static entries to a database table.
 
-The idea is to have specific keywords referenced by a cron.d entry. That entry
-calls the automated_tickets.py script and references the hard-coded keyword
-which is intended to reflect the date/time when the script is called.
+The script would then be modified to:
 
-I am also planning to have an additional daily entry (at least until specific
-times are supported) which is set to call a different reserved keyword. This
-keyword would instruct the script to calculate an acceptable, dynamic list
-of keywords that would be used to search for matching events in the database.
+1. Determine current date keywords (limited list of dynamic patterns)
+2. Search new table for those date keywords
+    - This should return a list of valid/matching static keywords
+3. Combine earlier dymamic date keywords with static keywords
+4. Query events table for matching entries
+5. Process normally
 
-Those events would not have a `name` key in the
-`base_supported_date_format_patterns` data structure. By lacking a `name` key,
-that is how the script would be able to confirm that the value should be
-computed dynamically.
+## Display format
+
+What about display format (e.g., "Reimage laptops for June 2018 (monthly)"?
+Here, `monthly` is the frequency and `June 2018` is the `coverage_period`.
+
+## Keyword properties
+
+Not sure yet if we'll turn these into custom objects, but they seem like a
+good fit for a set of new db table fields:
+
+- date_format
+- name
+    - not sure about this one
+- display_format
+
+## Replacing the DATE_LABEL
+
+The current `master` branch uses the key in `DATE_LABEL` dict to set frequency
+that the ticket occcurs at the end of the ticket title.
+
+Example:
+
+> Reimage laptops for June 2018 (monthly)
+
+Here, `June 2018` is the `coverage_period`.
+
+## Supported Dymamic keywords
+
+Today is Jun 21st, 2018; this results in six potential keywords, more if
+other patterns such as two digit years (decided against it) and single and
+digits months and days.
+
+Examples:
+
+- 2018_June_21
+- June_21
+- 21
+    - this one will be fun
+- 2018_06_21
+* 2018-Jun
