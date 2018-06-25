@@ -33,18 +33,18 @@ GRANT SELECT,LOCK TABLES ON event_reminders.* TO 'events_ro'@'localhost';
 -- The following permissions are needed to pull wiki page contents from
 -- the Redmine database. See the query in the automated_tickets.ini config
 -- file for how these columns are used.
-GRANT SELECT(text) ON help_redmine_db.wiki_contents TO 'events_ro'@'localhost';
-GRANT SELECT(id) ON help_redmine_db.wiki_contents TO 'events_ro'@'localhost';
+GRANT SELECT(text) ON redmine.wiki_contents TO 'events_ro'@'localhost';
+GRANT SELECT(id) ON redmine.wiki_contents TO 'events_ro'@'localhost';
 
-GRANT SELECT(id) ON help_redmine_db.wiki_pages TO 'events_ro'@'localhost';
-GRANT SELECT(wiki_id) ON help_redmine_db.wiki_pages TO 'events_ro'@'localhost';
-GRANT SELECT(title) ON help_redmine_db.wiki_pages TO 'events_ro'@'localhost';
+GRANT SELECT(id) ON redmine.wiki_pages TO 'events_ro'@'localhost';
+GRANT SELECT(wiki_id) ON redmine.wiki_pages TO 'events_ro'@'localhost';
+GRANT SELECT(title) ON redmine.wiki_pages TO 'events_ro'@'localhost';
 
-GRANT SELECT(id) ON help_redmine_db.wikis TO 'events_ro'@'localhost';
-GRANT SELECT(project_id) ON help_redmine_db.wikis TO 'events_ro'@'localhost';
+GRANT SELECT(id) ON redmine.wikis TO 'events_ro'@'localhost';
+GRANT SELECT(project_id) ON redmine.wikis TO 'events_ro'@'localhost';
 
-GRANT SELECT(identifier) ON help_redmine_db.projects TO 'events_ro'@'localhost';
-GRANT SELECT(id) ON help_redmine_db.projects TO 'events_ro'@'localhost';
+GRANT SELECT(identifier) ON redmine.projects TO 'events_ro'@'localhost';
+GRANT SELECT(id) ON redmine.projects TO 'events_ro'@'localhost';
 
 FLUSH PRIVILEGES;
 
