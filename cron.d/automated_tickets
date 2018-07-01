@@ -32,8 +32,8 @@
 # Run twice a year: January 1st and June 1st
 47          5       1    1,6       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "twice_year"
 
-# Run four times a year: The first of January, April, August, December
-47          5       1    1,4,8,12  *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "quarterly"
+# Run four times a year: The first of March, June, September, December
+47          5       1    3,6,9,12  *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "quarterly"
 
 
 # Run yearly on January 1st
