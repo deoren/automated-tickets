@@ -26,7 +26,12 @@
 - https://dev.mysql.com/doc/connector-python/en/
 - https://pypi.org/project/mysql-connector-python/
 
+### Logging
 
+- https://docs.python.org/3/library/logging.handlers.html
+- https://docs.python.org/3/library/logging.html
+- https://stackoverflow.com/questions/3968669/how-to-configure-logging-to-syslog-in-python
+- [Writing to syslog with Python's logging library](https://gist.github.com/sweenzor/1782457)
 
 ### SQLite
 

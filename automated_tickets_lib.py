@@ -4,6 +4,9 @@
 Library module used by the automated_tickets.py script. Not intended for direct use.
 """
 
+# TODO: Consider adding a hook to each function to provide this value
+# for debug output (troubleshooting)
+# name_of_this_function = sys._getframe().f_code.co_name
 
 
 ########################################
@@ -12,10 +15,32 @@ Library module used by the automated_tickets.py script. Not intended for direct 
 
 import configparser
 import datetime
+import logging
+import logging.handlers
 import os
 import re
 import smtplib
 import sys
+
+
+if __name__ == "__main__":
+    sys.exit("This module is meant to be imported, not executed directly.")
+
+########################################
+# Modules - Library/config settings
+########################################
+
+app_name = 'automated-tickets'
+
+# Create module-level logger object that inherits from "app" logger settings
+log = logging.getLogger(app_name).getChild(__name__)
+
+# TODO: How to mute messages from this library module by default?
+# TODO: Set NullHandler
+# log.addHandler(logging.NullHandler)
+
+log.debug("Logging initialized for %s", __name__)
+
 
 ########################################
 # Modules - Third party
@@ -29,12 +54,9 @@ import sys
 #
 # * sudo apt-get install mysql-connector-python
 # * pip install mysql-connector-python --user
+log.debug("Attempting to import mysql.connector module")
 import mysql.connector as mysql
 
-
-
-if __name__ == "__main__":
-    sys.exit("This module is meant to be imported, not executed directly.")
 
 #######################################################
 # Variables, constants
@@ -43,27 +65,6 @@ if __name__ == "__main__":
 
 DATE = datetime.date.today()
 TODAY = DATE.strftime('%Y-%m-%d')
-
-# Disable various modes by default. Will be overriden by main script that
-# imports this module
-DISPLAY_DEBUG_MESSAGES = False
-DISPLAY_INFO_MESSAGES = False
-
-# Going to assume we want these by default, we can override in config file
-DISPLAY_WARNING_MESSAGES = True
-DISPLAY_ERROR_MESSAGES = True
-
-# Ref #4: Background coloring provided by ASCII escape sequences
-BACKGROUND_COLORS = {
-    'DEBUG': '\033[95m',
-    'OKBLUE': '\033[94m',
-    'OKGREEN': '\033[92m',
-    'WARNING': '\033[93m',
-    'FAIL': '\033[91m',
-    'ENDC': '\033[0m',
-    'BOLD': '\033[1m',
-    'UNDERLINE': '\033[4m',
-}
 
 
 # TODO: Am I using these or SQL generated date values?
@@ -113,7 +114,13 @@ class Event(object):
 
     def __init__(self, event):
 
-        print_debug("{}".format(event), "Event class, input tuple")
+        self.log = log.getChild(self.__class__.__name__)
+
+        self.log.debug("%s class, input tuple: %s", __class__, event)
+
+        #log.warning("Test warning message to prove that the INI flag works")
+        #log.error("Test error message to prove that the INI flag works")
+
 
         # Expand out incoming tuple without hard-coding specific index values
         (self.email_to_address,
@@ -129,7 +136,7 @@ class Event(object):
          self.event_schedule
         ) = event
 
-        print_debug("new instance of object created", "Event class")
+        self.log.debug("%s: new instance of object created", __class__)
 
 
 class Settings(object):
@@ -140,6 +147,8 @@ class Settings(object):
     """
 
     def __init__(self, config_file_list):
+
+        self.log = log.getChild(self.__class__.__name__)
 
         try:
             parser = configparser.SafeConfigParser()
@@ -154,7 +163,7 @@ class Settings(object):
             # dataset.
             processed_files = parser.read(config_file_list)
 
-            print_debug("Config files processed: {}".format(processed_files), "CONFIG")
+            self.log.debug("CONFIG: Config files processed: %s", processed_files)
 
             # FIXME: We can either pass a verified list of files to the parser
             # OR we can verify the number of processed files is 1 or greater.
@@ -166,11 +175,9 @@ class Settings(object):
                 # to be too confusing.
                 raise configparser.ParsingError(config_file_list)
 
-        except configparser.ParsingError as err:
-
-            error_message = "Unable to parse config file: {}".format(err)
-            print_error(error_message, "CONFIG")
-            sys.exit()
+        except configparser.ParsingError as error:
+            self.log.exception("Unable to parse config file: %s", error)
+            sys.exit(1)
 
 
         # Begin building object by creating dictionary member attributes
@@ -210,22 +217,45 @@ class Settings(object):
             for key in self.flags:
                 self.flags[key] = parser.getboolean('flags', key)
 
-                print_debug("{} has a value of {} and a type of {}".format(
+                self.log.debug("%s has a value of %s and a type of %s",
                     key,
                     self.flags[key],
-                    type(self.flags[key])), "CONFIG")
+                    type(self.flags[key]))
 
-        except configparser.NoSectionError as err:
+        except configparser.NoSectionError as error:
 
-            error_message = "{}: Unable to parse config file: {}".format("CONFIG", err)
-            print_error(error_message)
-            sys.exit(error_message)
+            self.log.exception("Unable to parse config file: %s", error)
+            sys.exit(1)
 
+# Honor boolean flags set within main script config file and only
+# output specific log levels to the console.
+class ConsoleFilterFunc(logging.Filter):
+    def __init__(self, settings):
+        self.settings = settings
+        #print("Just proving that this function is being called")
+    def filter(self, record):
+        if self.settings.flags['display_console_error_messages'] and record.levelname == 'ERROR':
+            #print("Error messages enabled")
+            return True
+        if self.settings.flags['display_console_warning_messages'] and record.levelname == 'WARNING':
+            #print("Warning messages enabled")
+            return True
+        if self.settings.flags['display_console_info_messages'] and record.levelname == 'INFO':
+            #print("Info messages enabled")
+            return True
+        if self.settings.flags['display_console_debug_messages'] and record.levelname == 'DEBUG':
+            #print("Debug messages enabled")
+            return True
+        else:
+            #print("No matches")
+            return False
 
 #######################################################
 # Functions
 #######################################################
 
+# TODO: Merge this function since we probably do not need a separate function
+# for this.
 def open_db_connection(settings, database):
 
     """
@@ -239,22 +269,19 @@ def open_db_connection(settings, database):
 
     try:
 
-        print_debug("""MySQL connection details:
+        log.debug("DB User: %s", settings.mysqldb_config["user"])
+        log.debug("DB Name: %s", database)
+        log.debug("DB Host Name/IP: %s", settings.mysqldb_config["host"])
+        log.debug("DB Host Port: %s", settings.mysqldb_config["port"])
+        log.debug("MySQL - raise_on_warnings: %s",
+            settings.mysqldb_config["raise_on_warnings"])
+        log.debug("MySQL - raise_on_warnings type: %s",
+            type(settings.mysqldb_config["raise_on_warnings"]))
 
-        user: {}
-        password: {}
-        host: {}
-        port: {}
-        database: {}
-        raise_on_warnings: {}
-        raise_on_warnings (type): {}
-        """.format(settings.mysqldb_config['user'],
-                   settings.mysqldb_config['password'],
-                   settings.mysqldb_config['host'],
-                   settings.mysqldb_config['port'],
-                   database,
-                   settings.mysqldb_config['raise_on_warnings'],
-                   type(settings.mysqldb_config['raise_on_warnings'])), "MySQL")
+        log.info("Connecting to %s database on %s at port %s",
+            database,
+            settings.mysqldb_config["host"],
+            settings.mysqldb_config["port"])
 
         mysql_connection = mysql.connect(
             user=settings.mysqldb_config['user'],
@@ -266,10 +293,8 @@ def open_db_connection(settings, database):
         )
 
     except mysql.Error as error:
-        error_message = "Unable to connect to database: {}".format(error)
-        print_error(error_message, "MySQL")
-        sys.exit("MySQL: {}".format(error_message))
-
+        log.exception("Unable to connect to database: %s", error)
+        sys.exit(1)
 
     return mysql_connection
 
@@ -284,6 +309,8 @@ def get_wiki_page_contents(settings, wiki_page_name, wiki_page_project, wiki_pag
     # Create cursor object so that we can interact with the database
     ####################################################################
 
+    # TODO: Where is the cursor/connection closed/released?
+    log.info('Opening connection to database')
     mysql_connection = open_db_connection(settings, wiki_page_database)
 
     # Cursor for the MySQL copy of the database
@@ -300,23 +327,29 @@ def get_wiki_page_contents(settings, wiki_page_name, wiki_page_project, wiki_pag
         query = settings.queries['wiki_page_contents'].format(
             wiki_page_name, wiki_page_project)
 
-        print_debug(query, "Wiki page retrieval query")
+        log.debug("Wiki page retrieval query: %s", query)
 
+        log.info('Executing query')
         mysql_cursor.execute(query)
 
-    except Exception as e:
-        print_error("Unable to execute wiki page retrieval query: {} ".format(e), "MySQL")
-        sys.exit()
+    except Exception as error:
+        log.exception("Unable to execute wiki page retrieval query: %s", error)
+        sys.exit(1)
 
     try:
         # Grab first element of returned tuple, ignore everything else
         wiki_page_content = mysql_cursor.fetchone()[0]
 
-    except Exception as e:
-
+    except Exception as error:
         # FIXME: Is there a Plan B for wiki page lookup failures?
-        print_error("Unable to retrieve wiki page content: {} ".format(e), "MySQL")
-        sys.exit()
+        log.exception("Unable to retrieve wiki page content: %s", error)
+        sys.exit(1)
+    finally:
+        log.debug("Closing cursor ...")
+        mysql_cursor.close()
+
+        log.debug("Closing connection ...")
+        mysql_connection.close()
 
     if wiki_page_content is not None:
 
@@ -326,9 +359,14 @@ def get_wiki_page_contents(settings, wiki_page_name, wiki_page_project, wiki_pag
 
     else:
 
-        return "Unable to retrieve content from {}:{}".format(
+        # TODO: Is this an acceptable outcome? Should this be a hard error?
+        # The assumption here is that while one entry may be bad, we wish
+        # to continue processing the others and just note the problem.
+        error_message = "Unable to retrieve content from {}:{}".format(
             wiki_page_project, wiki_page_name
         )
+        log.warning(error_message)
+        return error_message
 
 def get_include_calls(wiki_page_contents, wiki_page_project):
 
@@ -348,10 +386,13 @@ def get_include_calls(wiki_page_contents, wiki_page_project):
     # TODO: Consider moving this to external config file for easy maintenace
     include_macro_pattern = r'{{include\(%s:[a-zA-Z0-9 _\-\']+\)}}' % (wiki_page_project)
 
+    # TODO: Do we properly handle zero results? Yes, the while loop which
+    # calls this function checks for an empty list to know when to stop
+    # looping.
     wiki_page_macro_calls = []
     wiki_page_macro_calls = re.findall(include_macro_pattern, wiki_page_contents)
 
-    print_debug(wiki_page_macro_calls, "List of include macro calls")
+    log.debug("List of include macro calls: %s", wiki_page_macro_calls)
 
     return wiki_page_macro_calls
 
@@ -378,7 +419,7 @@ def get_included_wiki_pages(wiki_page_macro_calls, wiki_page_project):
     for match in wiki_page_macro_calls:
         included_page = re.search(included_page_pattern, match)
 
-        if included_page:
+        if included_page is not None:
             # Append the first parenthesized subgroup of the match
             # The equivalent value appears to be 'included_page.groups()[0]'
             wiki_page_names.append(included_page.group(1))
@@ -387,10 +428,11 @@ def get_included_wiki_pages(wiki_page_macro_calls, wiki_page_project):
             # macro calls in the primary wiki page. If this situation
             # occurred then there is a bug somewhere and we need to know
             # about it.
-            print_error('No matches found', 'wiki_page_names search')
-            sys.exit()
+            # TODO: Raise exception?
+            log.error('No matching wiki page names found')
+            sys.exit(1)
 
-    print_debug("{}".format(wiki_page_names), "List of included wiki pages")
+    log.debug("List of included wiki pages: %s", wiki_page_names)
 
     return wiki_page_names
 
@@ -406,6 +448,7 @@ def get_events(settings, event_schedule):
     # Create cursor object so that we can interact with the database
     ####################################################################
 
+    log.info('Opening connection to database')
     mysql_connection = open_db_connection(settings, settings.mysqldb_config['events_database'])
 
     # Cursor for the MySQL copy of the database
@@ -433,12 +476,13 @@ def get_events(settings, event_schedule):
         query = base_query
 
     try:
+        log.info("Executing query")
         mysql_cursor.execute(query)
 
-    except Exception as e:
-        print_error("Unable to query event_reminders table: {} ".format(e), "MySQL")
+    except Exception as error:
+        log.exception("Unable to query event_reminders table: %s", error)
 
-    print_debug("Pulling data from {} MySQL table ...".format('events'), "MySQL")
+    log.debug("Pulling data from %s MySQL table ...", 'events')
 
     events = []
     for event in mysql_cursor.fetchall():
@@ -459,8 +503,15 @@ def get_events(settings, event_schedule):
     # Cleanup
     ####################################################################
 
+    # FIXME: Can this be handled with a context manager since there are several
+    # places where an exception may occur and cause the connecton to be
+    # uncleanly closed?
+
+    log.debug("Closing cursor ...")
+    mysql_cursor.close()
+
     # Close database connections
-    print_debug("Closing database connection ...", "MySQL")
+    log.debug("Closing database connection ...")
     mysql_connection.close()
 
     return events
@@ -477,97 +528,6 @@ def file_can_be_modified(full_path_to_file):
 
     return bool(os.access(full_path_to_file, os.W_OK))
 
-# FIXME: Consider tossing this function since I'm not using it
-def get_full_file_path(local_dir, global_dir, file_name):
-    """
-    Returns the full path to an external resource. If the file can be found
-    locally (same directory as this script) that full path will be returned,
-    otherwise the full path will be built from the "normal" location
-    """
-
-    local_file = os.path.join(local_dir, file_name)
-
-    global_file = os.path.join(global_dir, file_name)
-
-    # TODO: Consider adding a hook to each function to provide this value
-    # for debug output (troubleshooting)
-    name_of_this_function = sys._getframe().f_code.co_name
-
-    print_debug("local file is {}".format(local_file), name_of_this_function)
-    print_debug("global file is {}".format(global_file), name_of_this_function)
-
-    # Attempt to reference local file
-    if file_exists(local_file):
-        return local_file
-
-    elif file_exists(global_file):
-        return global_file
-
-    else:
-        # FIXME: Raise exception instead?
-        error_message = "[!] Unable to verify access for '{}' at '{}' or '{}'. Exiting ..."
-        sys.exit(error_message.format(file_name, local_file, global_file))
-
-
-def print_debug(message, prefix=""):
-    """Prints message if the DISPLAY_DEBUG_MESSAGES flag is set"""
-
-    if DISPLAY_DEBUG_MESSAGES:
-
-        if len(prefix) > 0:
-            prefix = "{}:".format(prefix)
-
-        print("{}[d] {} {}{}".format(
-            BACKGROUND_COLORS['DEBUG'],
-            prefix,
-            # Explicitly convert passed message to string for display
-            str(message),
-            BACKGROUND_COLORS['ENDC']))
-
-def print_info(message, prefix=""):
-    """Prints message if the DISPLAY_INFO_MESSAGES flag is set"""
-
-    if DISPLAY_INFO_MESSAGES:
-
-        if len(prefix) > 0:
-            prefix = "{}:".format(prefix)
-
-        print("{}[i] {} {}{}".format(
-            BACKGROUND_COLORS['BOLD'],
-            prefix,
-            # Explicitly convert passed message to string for display
-            str(message),
-            BACKGROUND_COLORS['ENDC']))
-
-def print_warning(message, prefix=""):
-    """Prints warning message to console"""
-
-    if DISPLAY_WARNING_MESSAGES:
-
-        if len(prefix) > 0:
-            prefix = "{}:".format(prefix)
-
-        print("{}[w] {} {}{}".format(
-            BACKGROUND_COLORS['WARNING'],
-            prefix,
-            # Explicitly convert passed message to string for display
-            str(message),
-            BACKGROUND_COLORS['ENDC']))
-
-def print_error(message, prefix=""):
-    """Prints warning message to console"""
-
-    if DISPLAY_ERROR_MESSAGES:
-
-        if len(prefix) > 0:
-            prefix = "{}:".format(prefix)
-
-        print("{}[!] {} {}{}".format(
-            BACKGROUND_COLORS['FAIL'],
-            prefix,
-            # Explicitly convert passed message to string for display
-            str(message),
-            BACKGROUND_COLORS['ENDC']))
 
 # FIXME: Add the from_address and to_address values onto the message object
 def send_notification(settings, from_address, to_address, message):
@@ -577,13 +537,17 @@ def send_notification(settings, from_address, to_address, message):
     of notifications. For now, only email notifications are supported.
     """
 
-    print_debug(message, "Notification")
+    log.debug("Notification: %s", message)
 
     email_server = settings.notification_servers['email_server_ip_or_fqdn']
     email_debug_filename = 'email.txt'
 
     if settings.flags['testing_mode']:
 
+        # TODO: With the automated-tickets-dev environment setting up a test
+        # mail to HTTP submission environment, should the default for test
+        # mode still be to write to a log file?
+        #
         # Fill in details from this run at the end of the file. It is up to
         # the caller to prune the old file if they wish to have the new
         # results go to a clean file.
