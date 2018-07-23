@@ -520,18 +520,6 @@ def get_events(settings, event_schedule):
 
     return events
 
-# Used by get_full_file_path() function, freestanding function
-# in case it needs to be used elsewhere
-def file_exists(full_path_to_file):
-    """Verify that the file exists and is readable."""
-
-    return bool(os.access(full_path_to_file, os.R_OK))
-
-def file_can_be_modified(full_path_to_file):
-    """Verify that the file exists and is writable."""
-
-    return bool(os.access(full_path_to_file, os.W_OK))
-
 
 # FIXME: Add the from_address and to_address values onto the message object
 def send_notification(settings, from_address, to_address, message):
