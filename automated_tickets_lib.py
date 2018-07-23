@@ -227,9 +227,13 @@ class Settings(object):
             self.log.exception("Unable to parse config file: %s", error)
             sys.exit(1)
 
-# Honor boolean flags set within main script config file and only
-# output specific log levels to the console.
 class ConsoleFilterFunc(logging.Filter):
+
+    """
+    Honor boolean flags set within main script config file and only
+    output specific log levels to the console.
+    """
+
     def __init__(self, settings):
         self.settings = settings
         #print("Just proving that this function is being called")
