@@ -34,7 +34,7 @@ GRANT SELECT,LOCK TABLES ON event_reminders.* TO 'events_ro'@'localhost';
 -- the Redmine database. See the query in the automated_tickets.ini config
 -- file for how these columns are used.
 GRANT SELECT(text) ON redmine.wiki_contents TO 'events_ro'@'localhost';
-GRANT SELECT(id) ON redmine.wiki_contents TO 'events_ro'@'localhost';
+GRANT SELECT(page_id) ON redmine.wiki_contents TO 'events_ro'@'localhost';
 
 GRANT SELECT(id) ON redmine.wiki_pages TO 'events_ro'@'localhost';
 GRANT SELECT(wiki_id) ON redmine.wiki_pages TO 'events_ro'@'localhost';
