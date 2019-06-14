@@ -36,8 +36,36 @@
 47          5       1    3,6,9,12  *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "quarterly"
 
 
+# minute    hour    dom     month   dow     user        command
+# ------------------------------------------------------------------------------------------
+
 # Run yearly on January 1st
 47          5       1    1       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly"
+
+# Run yearly on the first of the specified month
+47          5       1    1       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_january"
+47          5       1    1       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_jan"
+47          5       1    2       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_february"
+47          5       1    2       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_feb"
+47          5       1    3       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_march"
+47          5       1    3       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_mar"
+47          5       1    4       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_april"
+47          5       1    4       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_apr"
+47          5       1    5       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_may"
+47          5       1    6       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_june"
+47          5       1    6       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_jun"
+47          5       1    7       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_july"
+47          5       1    7       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_jul"
+47          5       1    8       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_august"
+47          5       1    8       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_aug"
+47          5       1    9       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_september"
+47          5       1    9       *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_sep"
+47          5       1    10      *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_october"
+47          5       1    10      *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_oct"
+47          5       1    11      *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_november"
+47          5       1    11      *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_nov"
+47          5       1    12      *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_december"
+47          5       1    12      *       scripts        /opt/automated_tickets/automated_tickets.py --event_schedule "yearly_dec"
 
 
 
